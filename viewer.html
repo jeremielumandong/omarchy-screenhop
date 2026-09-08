@@ -15,6 +15,27 @@ body{display:block}.stage{width:100%;height:100%;padding:68px 24px;background:ra
 .tool-dock{position:fixed;bottom:14px;right:14px;z-index:10;display:flex;flex-direction:column;align-items:flex-end;gap:8px}.tools-toggle{order:2;display:grid;place-items:center;width:31px;height:29px;border-radius:8px;background:#26282d80;color:#838a97;border-color:#ffffff09}.tools-toggle:hover,.tools-toggle:focus-visible{background:#343740;color:#e1e7f2}.floating-tools{visibility:hidden;opacity:0;pointer-events:none;display:flex;flex-direction:column;gap:7px;width:min(300px,calc(100vw - 28px));padding:10px;background:#25272df2;border:1px solid #ffffff13;border-radius:12px;box-shadow:0 10px 32px #0005}.tool-dock:hover .floating-tools,.tool-dock:focus-within .floating-tools,.tool-dock.open .floating-tools{visibility:visible;opacity:1;pointer-events:auto}.navigation{height:auto;min-height:30px;flex-wrap:wrap;gap:3px;padding:0;border:0}.navigation .url{order:3;flex-basis:100%;margin:4px 3px 2px;font-size:10px}.status{margin-left:auto;font-size:10px}.controls{gap:7px}.controls .pill{flex:1;justify-content:center;padding:7px;font-size:10px}.pill .button-label{display:inline}.toast{z-index:11}
 @media(max-width:540px){.stage{padding:64px 14px}.controls .pill{padding:7px}.navigation{padding:0}}
 @media(prefers-reduced-motion:no-preference){.floating-tools{transition:opacity .15s,visibility .15s}}
+
+.phone-keyboard{display:none}.phone .phone-keyboard{position:fixed;z-index:9;bottom:14px;left:14px;display:flex;flex-direction:column;align-items:flex-start;gap:7px;max-width:calc(100vw - 72px)}.phone-keyboard-toggle{min-height:38px;padding:8px 12px;font-size:12px;background:#292c33ed;border:1px solid #ffffff18;border-radius:9px}.phone-keyboard-panel{padding:10px;background:#25272df2;border:1px solid #ffffff18;border-radius:11px;width:min(300px,calc(100vw - 72px));box-shadow:0 8px 28px #0005}.phone-keyboard-panel[hidden]{display:none}.phone-keyboard-panel label{font-size:11px;color:#bec5d1;display:block;line-height:1.5;margin-bottom:7px}.phone-keyboard-panel textarea{display:block;resize:none;width:100%;height:39px;min-height:39px;border-radius:7px;padding:8px;background:#191c22;border:1px solid #8eaefc66;color:#e6edf9;font:16px system-ui;outline-offset:2px}.phone-keyboard-panel .keyboard-actions{display:flex;gap:6px;margin-top:7px}.keyboard-actions button{border:1px solid #ffffff18;border-radius:6px;min-height:34px;padding:5px 9px;font-size:11px}.phone .tools-toggle{width:38px;height:38px}.phone .stage{padding-bottom:76px;padding-top:76px}.phone .floating-tools button{min-height:38px}
+
+/* Original device silhouettes. Hardware stays outside the exact, rectangular CSS viewport. */
+.device{--stand-height:0px}.device.desktop{--stand-height:32px}.hardware-top,.hardware-bottom{flex-shrink:0}.screen{flex-shrink:0}
+.skin-iphone-notch .hardware-top{height:45px}.skin-iphone-notch .camera{top:0;width:150px;height:26px;border-radius:0 0 17px 17px}.skin-iphone-notch .camera::before{content:"";position:absolute;width:42px;height:4px;left:43px;top:10px;border-radius:5px;background:#181b21}.skin-iphone-notch .camera::after{right:22px;top:9px}
+.skin-iphone-island{background:linear-gradient(105deg,#9b95a8,#37333f 2%,#09090d 6%,#141319 96%,#827b91)}.skin-iphone-island .camera{width:99px;height:26px;top:8px}.skin-iphone-island .camera::before{content:"";position:absolute;width:28px;height:4px;left:17px;top:11px;border-radius:5px;background:#090b10}
+.device.skin-iphone-classic{--bezel:13px;border-radius:43px;background:linear-gradient(105deg,#90949b,#131518 3%,#08090a 96%,#979ba2)}.skin-iphone-classic .hardware-top{height:52px;border-radius:30px 30px 0 0}.skin-iphone-classic .clock,.skin-iphone-classic .system-icons{display:none}.skin-iphone-classic .camera{top:22px;width:49px;height:5px;border-radius:6px;background:#30333a}.skin-iphone-classic .camera::after{right:65px;top:-1px;width:7px;height:7px;background:radial-gradient(circle,#183757,#070b12)}.skin-iphone-classic .hardware-bottom{height:58px;border-radius:0 0 30px 30px}.skin-iphone-classic .hardware-bottom::before{width:35px;height:35px;border:2px solid #51555d;box-shadow:inset 0 0 0 2px #111317;background:linear-gradient(135deg,#090a0d,#202329);border-radius:50%}
+.device.skin-foldable{--bezel:11px;border-radius:30px;background:linear-gradient(90deg,#6f727c,#14161c 2%,#090b10 48%,#32363f 50%,#090b10 52%,#15171b 98%,#686e79)}.skin-foldable .hardware-top{height:23px;border-radius:19px 19px 0 0}.skin-foldable .camera{left:75%;top:7px;width:8px;height:8px}.skin-foldable .hardware-bottom{height:19px;border-radius:0 0 19px 19px}.skin-foldable::before{left:-4px;top:38%;width:4px;height:24%;box-shadow:none;background:linear-gradient(90deg,#858b95,#31363f)}
+.device.skin-watch{--bezel:20px;border-radius:55px;background:linear-gradient(115deg,#aeb0b4,#40444b 4%,#121418 12%,#0c0e12 83%,#747981 99%);box-shadow:0 0 0 2px #646a7480,inset 0 0 0 4px #07090b,0 20px 45px #0008}.skin-watch .hardware-top{height:19px;border-radius:35px 35px 0 0}.skin-watch .hardware-bottom{height:19px;border-radius:0 0 35px 35px}.skin-watch .clock,.skin-watch .system-icons,.skin-watch .camera,.skin-watch .hardware-bottom::before{display:none}.skin-watch::before{left:auto;right:-11px;top:23%;width:11px;height:34px;border-radius:5px;background:repeating-linear-gradient(0deg,#747983 0 2px,#373d47 2px 4px);box-shadow:inset 0 0 0 1px #acb1b866}.skin-watch::after{right:-4px;top:58%;width:4px;height:34px;border-radius:4px;background:#737984}
+.device.skin-laptop{--stand-height:23px;--bezel:12px;border-radius:19px 19px 5px 5px;box-shadow:inset 0 0 0 2px #5a606c,0 20px 50px #0008}.skin-laptop .hardware-top{height:12px}.skin-laptop .camera{top:2px;width:5px;height:5px;background:#304257}.skin-laptop .hardware-bottom{height:15px;border-radius:0}.skin-laptop .hardware-bottom::before{width:70px;height:3px;background:#555b68}.skin-laptop::before{left:calc(50% - 55px);top:100%;width:110px;height:7px;border-radius:0 0 9px 9px;background:#646a74;box-shadow:none;z-index:1}.skin-laptop::after{left:0;right:auto;top:100%;width:100%;height:22px;border-radius:2px 2px 22px 22px;background:linear-gradient(#999fa9 0%,#707782 25%,#444a55 75%,#242831);box-shadow:0 6px 15px #0006}
+.device.skin-tv{--stand-height:26px;--bezel:8px;border-radius:5px;background:#111419;box-shadow:0 0 0 1px #626973,0 20px 50px #0007}.skin-tv .hardware-top{height:0}.skin-tv .camera{display:none}.skin-tv .hardware-bottom{height:13px;border-radius:0}.skin-tv .hardware-bottom::before{height:3px;width:3px;background:#9cc7be;box-shadow:0 0 4px #9cc7be77}.skin-tv::before,.skin-tv::after{top:100%;width:65px;height:7px;border-radius:2px;background:linear-gradient(#69707d,#252932);box-shadow:0 3px 4px #0006;transform-origin:top center}.skin-tv::before{left:15%;transform:rotate(-20deg)}.skin-tv::after{left:auto;right:15%;transform:rotate(20deg)}
+.device.skin-kiosk{--stand-height:42px;--bezel:24px;border-radius:15px;background:linear-gradient(110deg,#5d636d,#272c33 3%,#171b21 96%,#555d69)}.skin-kiosk .hardware-top{height:22px;border-radius:4px}.skin-kiosk .camera{width:7px;height:7px;top:3px}.skin-kiosk .hardware-bottom{height:42px;border-radius:4px}.skin-kiosk .hardware-bottom::before{width:85px;height:5px;border-radius:3px;background:#090c11;box-shadow:0 1px #777f8844}.skin-kiosk::before{left:calc(50% - 60px);top:100%;width:120px;height:31px;border-radius:0;background:linear-gradient(#15191f,#4c535e);box-shadow:none}.skin-kiosk::after{left:calc(50% - 110px);top:calc(100% + 30px);width:220px;height:10px;border-radius:6px 6px 2px 2px;background:linear-gradient(#6c7380,#323842)}
+.device.skin-handheld{--bezel:12px;display:flex;align-items:stretch;width:calc(var(--w)*1px + 136px);border-radius:53px;background:linear-gradient(110deg,#424853,#22262e 5%,#161a21 95%,#414955);box-shadow:inset 0 0 0 2px #69717e55,0 24px 55px #0008}.skin-handheld .hardware-top,.skin-handheld .hardware-bottom{width:56px;height:auto;background:transparent;position:relative}.skin-handheld .hardware-top{border-radius:0;padding:0}.skin-handheld .clock,.skin-handheld .system-icons{display:none}.skin-handheld .camera{left:50%;top:21%;width:30px;height:30px;border-radius:50%;background:radial-gradient(circle,#363e48 35%,#151922 40%,#444d59 48%,#10141b 68%);box-shadow:0 3px 5px #0008}.skin-handheld .camera::after{right:8px;top:calc(150% + 16px);width:14px;height:37px;background:#11151c;border-radius:3px;box-shadow:inset 0 0 0 1px #555e6944}.skin-handheld .camera::before{content:"";position:absolute;left:-4px;top:calc(150% + 27px);width:37px;height:14px;background:#11151c;border-radius:3px}.skin-handheld .hardware-bottom{border-radius:0}.skin-handheld .hardware-bottom::before{position:absolute;left:17px;top:55%;width:27px;height:27px;border-radius:50%;background:radial-gradient(circle,#363e48 35%,#151922 40%,#444d59 48%,#10141b 68%);box-shadow:0 3px 5px #0008}.skin-handheld .hardware-bottom::after{content:"";position:absolute;top:20%;left:23px;width:9px;height:9px;border-radius:50%;background:#76818f;box-shadow:-12px 12px #687789,12px 12px #86919c,0 24px #596677}.skin-handheld::before,.skin-handheld::after{display:none}
+.device.skin-panel{--stand-height:0px;--bezel:17px;border-radius:20px;background:linear-gradient(120deg,#9ca3ac,#525b67 3%,#2a323e 97%,#87929f)}.skin-panel .hardware-top{height:9px;border-radius:3px}.skin-panel .camera{width:4px;height:4px;top:0}.skin-panel .hardware-bottom{height:9px;border-radius:3px}.skin-panel .hardware-bottom::before{height:3px;width:32px;background:#10151c}.skin-panel::before,.skin-panel::after{display:none}
+.device.landscape{display:flex;align-items:stretch;width:calc(var(--w)*1px + var(--bezel)*2 + 70px)}.landscape .hardware-top{width:43px;height:calc(var(--h)*1px);border-radius:43px 0 0 43px;padding:0}.landscape .hardware-bottom{width:27px;height:calc(var(--h)*1px);border-radius:0 43px 43px 0}.landscape .clock,.landscape .system-icons{display:none}.landscape .camera{left:9px;top:50%;width:25px;height:90px;transform:translateY(-50%);border-radius:20px}.landscape .camera::after{top:9px;right:8px}.landscape .camera::before{display:none}.landscape .hardware-bottom::before{width:4px;height:100px}.landscape::before{top:-3px;left:120px;width:42px;height:3px;box-shadow:53px 0 #676874}.landscape::after{top:auto;bottom:-3px;left:170px;right:auto;width:64px;height:3px}
+.skin-iphone-notch.landscape .hardware-top{width:45px}.skin-iphone-notch.landscape{width:calc(var(--w)*1px + var(--bezel)*2 + 72px)}.skin-iphone-notch.landscape .camera{left:0;width:26px;height:150px;border-radius:0 17px 17px 0}.skin-iphone-notch.landscape .camera::after{top:22px}
+.skin-iphone-classic.landscape{width:calc(var(--w)*1px + var(--bezel)*2 + 110px)}.skin-iphone-classic.landscape .hardware-top{width:52px}.skin-iphone-classic.landscape .hardware-bottom{width:58px}.skin-iphone-classic.landscape .camera{left:22px;width:5px;height:49px}.skin-iphone-classic.landscape .camera::after{top:-19px;right:-1px}.skin-iphone-classic.landscape .hardware-bottom::before{width:35px;height:35px}
+.android.landscape{width:calc(var(--w)*1px + var(--bezel)*2 + 54px)}.android.landscape .hardware-top{width:34px}.android.landscape .hardware-bottom{width:20px}.android.landscape .camera{width:13px;height:13px;left:10px}.android.landscape .camera::after{top:4px;right:4px}.android.landscape .hardware-bottom::before{width:3px;height:85px}
+.tablet.landscape{width:calc(var(--w)*1px + var(--bezel)*2 + 30px)}.tablet.landscape .hardware-top,.tablet.landscape .hardware-bottom{width:15px}.tablet.landscape .camera{left:1px;width:7px;height:7px}.tablet.landscape .camera::after{top:2px;right:2px}.tablet.landscape .hardware-bottom::before{width:3px;height:100px}.skin-foldable.landscape{width:calc(var(--w)*1px + var(--bezel)*2 + 42px)}.skin-foldable.landscape .hardware-top{width:23px}.skin-foldable.landscape .hardware-bottom{width:19px}.skin-foldable.landscape .camera{left:7px}
+.device.bare{display:block;width:calc(var(--w)*1px);padding:0;--stand-height:0px}.device.bare .hardware-top,.device.bare .hardware-bottom,.device.bare::before,.device.bare::after{display:none}
 </style>
 </head>
 <body>
@@ -25,17 +46,29 @@ body{display:block}.stage{width:100%;height:100%;padding:68px 24px;background:ra
 </aside>
 <main class="stage" id="stage"><div class="preview-group"><div class="preview-label"><strong id="preview-name"></strong><span id="preview-size"></span></div><div class="fit-box" id="fit-box"><div class="device" id="device"><div class="hardware-top" aria-hidden="true"><span class="clock">9:41</span><span class="camera"></span><span class="system-icons"><svg viewBox="0 0 20 20"><path d="M2 15v-2m4 2v-5m4 5V7m4 8V4"/></svg><svg viewBox="0 0 20 20"><path d="M2 7a12 12 0 0 1 16 0M5 10a8 8 0 0 1 10 0m-7 3a3 3 0 0 1 4 0m-2 3h.01"/></svg><svg viewBox="0 0 22 20"><rect x="1" y="5" width="16" height="10" rx="2"/><path d="M20 8v4M4 8h10v4H4z"/></svg></span></div><div class="screen" id="screen" tabindex="0" role="application" aria-label="Interactive device preview. Click to focus; keyboard and pointer input control the website."><img id="display" alt="Live website preview" draggable="false"><div class="loading" id="loading">Connecting to your preview…</div></div><div class="hardware-bottom" aria-hidden="true"></div></div></div></div><div class="toast" id="toast" role="alert" hidden></div></main>
 <footer class="footer"><span id="footer-device"></span><span class="separator">·</span><span id="scale"></span><span class="separator">·</span><span>ScreenHop 1.0.0</span></footer>
+<section class="phone-keyboard" aria-label="Phone keyboard controls">
+ <button id="phone-keyboard-toggle" class="phone-keyboard-toggle" aria-expanded="false" aria-controls="phone-keyboard-panel">Keyboard</button>
+ <div id="phone-keyboard-panel" class="phone-keyboard-panel" hidden><label for="phone-keyboard-input">Tap a field in the preview, then type here.</label><textarea id="phone-keyboard-input" rows="1" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="text" aria-label="Type into the selected preview field"></textarea><div class="keyboard-actions"><button id="phone-backspace" type="button">Backspace</button><button id="phone-enter" type="button">Enter</button><button id="phone-keyboard-done" type="button">Done</button></div></div>
+</section>
 <script>
 'use strict';
 const config = __SCREENHOP_CONFIG__;
+const phone = config.phone === true;
+document.body.classList.toggle('phone', phone);
 const $ = id => document.getElementById(id);
 const screen = $('screen'), display = $('display'), device = $('device');
 const width = Number(config.width), height = Number(config.height);
 device.style.setProperty('--w', width); device.style.setProperty('--h', height);
 const name = String(config.name || 'Custom device');
 const group = String(config.group || '').toLowerCase();
-const style = /tablet|ipad/i.test(group + ' ' + name) ? 'tablet' : /iphone|apple/i.test(name + ' ' + group) ? 'iphone' : /android|phone/i.test(group) || config.mobile ? 'android' : 'desktop';
-device.classList.add(style);
+const skinKeys = new Set(['iphone-notch','iphone-island','iphone-classic','android','tablet','foldable','watch','laptop','desktop','tv','kiosk','handheld','panel']);
+const identity = group + ' ' + name;
+const fallbackSkin = /watch/i.test(identity) ? 'watch' : /fold/i.test(identity) ? 'foldable' : /tablet|ipad/i.test(identity) ? 'tablet' : /iphone|apple/i.test(identity) ? /\bSE\b|iphone [678]\b/i.test(name) ? 'iphone-classic' : /(?:14 pro|1[5-9])/i.test(name) ? 'iphone-island' : 'iphone-notch' : /laptop|macbook/i.test(identity) ? 'laptop' : /\btv\b|television/i.test(identity) ? 'tv' : /kiosk/i.test(identity) ? 'kiosk' : /handheld|steam deck/i.test(identity) ? 'handheld' : /panel/i.test(identity) ? 'panel' : /android|phone/i.test(identity) || config.mobile ? 'android' : 'desktop';
+const skin = skinKeys.has(config.skin) ? config.skin : fallbackSkin;
+const style = skin.startsWith('iphone-') ? 'iphone' : skin === 'foldable' ? 'tablet' : ['laptop','tv','kiosk','panel'].includes(skin) ? 'desktop' : skin;
+device.classList.add(style,'skin-' + skin);
+device.dataset.skin = skin;
+device.classList.toggle('landscape',width > height && ['iphone-notch','iphone-island','iphone-classic','android','tablet','foldable'].includes(skin));
 document.title = `ScreenHop • ${name} • ${width}×${height}`;
 $('device-name').textContent = name;
 $('dimensions').textContent = `${width} × ${height} CSS px · ${config.dpr || 1}× pixel density`;
@@ -48,7 +81,7 @@ function fit() {
  const stage = $('stage'), styles = getComputedStyle(stage);
  const availableWidth = stage.clientWidth - parseFloat(styles.paddingLeft) - parseFloat(styles.paddingRight) - 8;
  const availableHeight = stage.clientHeight - parseFloat(styles.paddingTop) - parseFloat(styles.paddingBottom) - 8;
- const extra = showFrame && style === 'desktop' ? 32 : 0;
+ const extra = showFrame ? Number.parseFloat(getComputedStyle(device).getPropertyValue('--stand-height')) || 0 : 0;
  const scale = Math.max(.01, Math.min(1, availableWidth / device.offsetWidth, availableHeight / (device.offsetHeight + extra)));
  device.style.transform = `scale(${scale})`;
  $('fit-box').style.width = `${device.offsetWidth * scale}px`;
@@ -80,6 +113,7 @@ $('frame').addEventListener('click', () => { showFrame = !showFrame; try { local
 function point(event) { const rect = screen.getBoundingClientRect(); return {x:Math.max(0,Math.min(width - .01,(event.clientX - rect.left) * width / rect.width)),y:Math.max(0,Math.min(height - .01,(event.clientY - rect.top) * height / rect.height))}; }
 function modifiers(event) { return (event.altKey ? 1:0) | (event.ctrlKey ? 2:0) | (event.metaKey ? 4:0) | (event.shiftKey ? 8:0); }
 const buttonName = index => ['left','middle','right'][index] || 'none';
+let touchGesture = null;
 let clickCount = 1, previousClick = {time:0,x:0,y:0,button:-1}, capturedPointer = null, lastPoint = {x:0,y:0}, heldButton = 'left';
 screen.addEventListener('pointerdown', event => {
  if (capturedPointer !== null) return;
@@ -88,21 +122,33 @@ screen.addEventListener('pointerdown', event => {
  clickCount = now - previousClick.time < 450 && Math.hypot(p.x - previousClick.x,p.y - previousClick.y) < 5 && event.button === previousClick.button ? Math.min(clickCount + 1,3) : 1;
  previousClick = {...p,time:now,button:event.button}; capturedPointer = event.pointerId; lastPoint = p; heldButton = buttonName(event.button);
  screen.setPointerCapture(event.pointerId);
+ if (phone && event.pointerType === 'touch') { touchGesture = {startX:event.clientX,startY:event.clientY,lastX:event.clientX,lastY:event.clientY,swiping:false}; return; }
  input({kind:'mouse',type:'mousePressed',...p,button:heldButton,buttons:event.buttons,clickCount,modifiers:modifiers(event)});
 });
 let movePending = null, moveScheduled = false;
 function flushMove() { if (movePending) { input(movePending); movePending = null; } }
 screen.addEventListener('pointermove', event => {
+ if (touchGesture) {
+  if (event.pointerId !== capturedPointer) return;
+  const gesture = touchGesture, rect = screen.getBoundingClientRect();
+  if (Math.hypot(event.clientX - gesture.startX,event.clientY - gesture.startY) > 7) gesture.swiping = true;
+  if (gesture.swiping) { input({kind:'wheel',...point(event),deltaX:(gesture.lastX - event.clientX)*width/rect.width,deltaY:(gesture.lastY - event.clientY)*height/rect.height,modifiers:0}); gesture.lastX = event.clientX; gesture.lastY = event.clientY; }
+  return;
+ }
  lastPoint = point(event);
  movePending = {kind:'mouse',type:'mouseMoved',...lastPoint,button:event.buttons ? heldButton:'none',buttons:event.buttons,clickCount:0,modifiers:modifiers(event)};
  if (!moveScheduled) { moveScheduled = true; requestAnimationFrame(() => { moveScheduled = false; flushMove(); }); }
 });
 screen.addEventListener('pointerup', event => {
  if (capturedPointer !== event.pointerId) return;
+ if (touchGesture) {
+  if (!touchGesture.swiping) { const p = point(event); input({kind:'mouse',type:'mousePressed',...p,button:'left',buttons:1,clickCount,modifiers:0}); input({kind:'mouse',type:'mouseReleased',...p,button:'left',buttons:0,clickCount,modifiers:0}); }
+  touchGesture = null; capturedPointer = null; screen.releasePointerCapture(event.pointerId); return;
+ }
  flushMove(); input({kind:'mouse',type:'mouseReleased',...point(event),button:heldButton,buttons:event.buttons,clickCount,modifiers:modifiers(event)});
  capturedPointer = null; screen.releasePointerCapture(event.pointerId);
 });
-function releasePointer() { if (capturedPointer !== null) { input({kind:'mouse',type:'mouseReleased',...lastPoint,button:heldButton,buttons:0,clickCount:1,modifiers:0}); capturedPointer = null; } }
+function releasePointer() { if (touchGesture) { touchGesture = null; capturedPointer = null; return; } if (capturedPointer !== null) { input({kind:'mouse',type:'mouseReleased',...lastPoint,button:heldButton,buttons:0,clickCount:1,modifiers:0}); capturedPointer = null; } }
 screen.addEventListener('pointercancel', releasePointer);
 screen.addEventListener('lostpointercapture', releasePointer);
 screen.addEventListener('contextmenu', event => event.preventDefault());
@@ -129,6 +175,32 @@ screen.addEventListener('compositionend', event => { if (event.data) input({kind
 function releaseKeys() { for (const data of heldKeys.values()) { const up = {...data,type:'keyUp',modifiers:0}; delete up.text; input(up); } heldKeys.clear(); }
 screen.addEventListener('blur', releaseKeys);
 window.addEventListener('blur', () => { releaseKeys(); releasePointer(); });
+// The helper is a transient input bridge: never retain typed text or read the clipboard.
+if (phone) {
+ const keyboard = $('phone-keyboard-input'), keyboardPanel = $('phone-keyboard-panel');
+ const seed = '\u200b';
+ let composing = false;
+ function clearKeyboard() { keyboard.value = seed; keyboard.setSelectionRange(1,1); }
+ function keyPress(key,code,keyCode) { input({kind:'key',type:'keyDown',key,code,keyCode,modifiers:0,...(key === 'Enter' ? {text:'\r'} : {})}); input({kind:'key',type:'keyUp',key,code,keyCode,modifiers:0}); }
+ function commitKeyboard() { const text = keyboard.value.replaceAll(seed,''); if (text) input({kind:'text',text}); clearKeyboard(); }
+ function closeKeyboard() { composing = false; clearKeyboard(); keyboard.blur(); keyboardPanel.hidden = true; $('phone-keyboard-toggle').setAttribute('aria-expanded','false'); }
+ $('phone-keyboard-toggle').addEventListener('click', () => { keyboardPanel.hidden = false; $('phone-keyboard-toggle').setAttribute('aria-expanded','true'); clearKeyboard(); keyboard.focus({preventScroll:true}); });
+ $('phone-keyboard-done').addEventListener('click', closeKeyboard);
+ $('phone-backspace').addEventListener('click', () => { keyPress('Backspace','Backspace',8); clearKeyboard(); keyboard.focus({preventScroll:true}); });
+ $('phone-enter').addEventListener('click', () => { keyPress('Enter','Enter',13); clearKeyboard(); keyboard.focus({preventScroll:true}); });
+ keyboard.addEventListener('beforeinput', event => {
+  if (composing || event.isComposing) return;
+  if (event.inputType === 'deleteContentBackward' || event.inputType === 'deleteContentForward') { event.preventDefault(); const backwards = event.inputType === 'deleteContentBackward'; keyPress(backwards ? 'Backspace':'Delete',backwards ? 'Backspace':'Delete',backwards ? 8:46); clearKeyboard(); }
+  else if (event.inputType === 'insertLineBreak' || event.inputType === 'insertParagraph') { event.preventDefault(); keyPress('Enter','Enter',13); clearKeyboard(); }
+ });
+ keyboard.addEventListener('input', event => { if (!composing && !event.isComposing) commitKeyboard(); });
+ keyboard.addEventListener('compositionstart', () => { composing = true; });
+ keyboard.addEventListener('compositionend', () => { composing = false; commitKeyboard(); });
+ keyboard.addEventListener('paste', event => { event.preventDefault(); const text = event.clipboardData?.getData('text/plain'); if (text) input({kind:'text',text}); clearKeyboard(); });
+ keyboard.addEventListener('blur', () => { composing = false; clearKeyboard(); });
+ window.addEventListener('pagehide', () => { keyboard.value = ''; });
+ clearKeyboard();
+}
 const events = new EventSource(config.base + '/events');
 events.addEventListener('open', () => status('live','Live'));
 events.addEventListener('frame', event => { try { const frame = JSON.parse(event.data); if (typeof frame.data !== 'string') return; display.src = 'data:image/jpeg;base64,' + frame.data; screen.classList.add('has-frame'); status('live','Live'); } catch { toast('Unable to display a preview frame.'); } });

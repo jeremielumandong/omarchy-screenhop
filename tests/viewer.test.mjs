@@ -55,6 +55,26 @@ test('centered live device frame, input forwarding, authentication isolation and
   await evalView('document.querySelector("#frame").click()');
   const screenshot=await viewer.send('Page.captureScreenshot',{format:'png'},view);
   await writeFile('/tmp/screenhop-1.0.0-preview.png',Buffer.from(screenshot.data,'base64'));
+  const paired=await run('--phone','on');
+  assert.equal(paired.enabled,true);
+  const remoteBase=new URL(paired.url);remoteBase.hostname='127.0.0.1';
+  const remoteView=new URL('view/'+first.targetId,remoteBase);
+  assert.equal((await run('--phone-status')).enabled,true);
+  const remoteHTML=await (await fetch(remoteView)).text();
+  assert.match(remoteHTML,/"phone":true/);
+  const remotePost=async(route,data)=>{
+   const response=await fetch(remoteView+'/'+route,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+   assert.equal(response.status,200);
+  };
+  await remotePost('action',{action:'link',enabled:true});
+  await remotePost('input',{kind:'mouse',type:'mousePressed',x:button.x,y:button.y,button:'left',clickCount:1});
+  await remotePost('input',{kind:'mouse',type:'mouseReleased',x:button.x,y:button.y,button:'left',clickCount:1});
+  await eventually(()=>evalSource('document.querySelector("#counter").textContent === "2"'),'phone click reaches source');
+  const {sessionId:otherPage}=await source.send('Target.attachToTarget',{targetId:second.targetId,flatten:true});
+  await eventually(async()=>(await source.send('Runtime.evaluate',{expression:'document.querySelector("#counter").textContent',returnByValue:true},otherPage)).result.value==='1','phone click reaches linked preview');
+  assert.equal((await run('--phone','off')).enabled,false);
+  await assert.rejects(fetch(remoteView));
+  console.log('Phone integration: pairing, status, real renderer input, linked follower and revocation passed.');
   for(const provider of ['identityserver/connect','okta/oauth2/default/v1','azure/tenant/oauth2/v2.0','auth0','google/o/oauth2/v2','github/login/oauth']){
    await source.send('Page.navigate',{url:url+'/home'},page);await sleep(250);
    const enabled=await run('--link','on');assert.equal(enabled.enabled,true);

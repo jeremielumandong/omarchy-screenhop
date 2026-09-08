@@ -3,7 +3,7 @@
   if (globalThis.__screenhopInstalled) return;
   globalThis.__screenhopInstalled = true;
   let mutedUntil = 0;
-  let authPaused = false;
+  let authPaused = false, authHref = "", authEvidence = false;
 // Authentication transactions belong to one preview: OAuth state, one-time codes,
 // and challenge tokens must never be replayed into another browser context.
 function isAuthUrl(value) {
@@ -31,7 +31,7 @@ function canSyncNavigation(sourcePreviousUrl, nextUrl) {
 
   const pauseAuth = reason => {
     if (authPaused) return;
-    authPaused = true;
+    authPaused = true; authHref = location.href;
     globalThis.screenhopEvent(JSON.stringify({kind:'auth',reason,origin:location.origin}));
   };
   const authFields = 'input[type="password"],input[autocomplete="one-time-code"],input[autocomplete="username"],input[autocomplete="current-password"],input[autocomplete="new-password"],input[name="otp"],input[name="verification_code"]';
@@ -43,10 +43,12 @@ function canSyncNavigation(sourcePreviousUrl, nextUrl) {
   const submitAction = element => !!element.form &&
     (element.matches('button:not([type]),button[type="submit"]') || element.matches('input[type="submit"],input[type="image"]'));
   const detectAuthPage = () => {
-    if (isAuthUrl(location.href)) pauseAuth('Authentication or challenge URL');
-    else if (document.querySelector(authFields)) pauseAuth('Login or verification form');
+    if (isAuthUrl(location.href)) {authEvidence=true;pauseAuth('Authentication or challenge URL');}
+    else if (document.querySelector(authFields)) {authEvidence=true;pauseAuth('Login or verification form');}
     else if (document.querySelector('iframe[src*="challenges.cloudflare.com"],.cf-turnstile,#challenge-form')) pauseAuth('Browser verification challenge');
+    else if (authPaused && (authEvidence || location.href !== authHref)) { authPaused=false;authEvidence=false; globalThis.screenhopEvent(JSON.stringify({kind:'auth-clear',origin:location.origin})); }
   };
+  globalThis.screenhopCheckAuth = detectAuthPage;
   detectAuthPage();
   new MutationObserver(detectAuthPage).observe(document,{childList:true,subtree:true});
   addEventListener('hashchange',detectAuthPage);
@@ -71,10 +73,12 @@ function canSyncNavigation(sourcePreviousUrl, nextUrl) {
     if (!authPaused && event.isTrusted && Date.now() >= mutedUntil) globalThis.screenhopEvent(JSON.stringify({...data, origin:location.origin}));
   };
   document.addEventListener('click', event => {
-    const element = event.target instanceof Element ? event.target.closest('button,a,input,select,textarea,[role="button"]') : null;
-    if (!element || !event.isTrusted || authPaused) return;
+    detectAuthPage();
+    if (!(event.target instanceof Element) || !event.isTrusted || authPaused) return;
+    const element = event.target.closest('button,a,input,select,textarea,[role="button"]') || event.target;
     if (authAction(element)) { pauseAuth('Authentication action'); return; }
     if (submitAction(element) || element.matches('input[type="password"],input[type="file"]')) return;
+    if (event.button === 0 && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) send(event,{kind:'gesture'});
     if (element.matches('a[href]')) {
       if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || element.hasAttribute('download') || (element.target && element.target !== '_self')) return;
       if (canSyncNavigation(location.href,element.href)) send(event,{kind:'navigate',url:element.href});

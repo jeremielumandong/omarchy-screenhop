@@ -16,3 +16,12 @@ Screenshot `preview.png` was captured from the actual framed viewer displaying a
 
 - Borderless desktop regression passed: application viewport height equals outer window height (no browser titlebar/tabs/address bar), and the device outline is centered on both axes.
 - Installer regression passed: legacy backup migration and repeat installs preserve all backups outside discovery and leave exactly one discoverable ScreenHop 1.0.0.
+
+## Linking, phone remote and catalog update
+
+- Combined authentication/browser/viewer/phone suite: 36 tests passed. Real browser coverage includes unnamed SPA buttons and clickable rows, group linking preservation, same-document OAuth recovery, and phone input reaching both the lead and follower.
+- Direct/native regression: 2 tests passed with the same linking scenarios.
+- Phone HTTP tests cover token gating, origin/Host validation, allowed commands, frame streaming and revocation. Phone touch/keyboard bridge tested in Chromium; physical phone and actual Wi-Fi connectivity remain unverified.
+- Catalog expanded to 66 unique presets across 10 groups; original 16 dimensions and IDs preserved. Generic specialty devices are labeled responsive.
+- QML category/custom-size/phone/linking smoke passed; repeated installer test passed with the phone module included.
+- Existing controllers require all previews to close and 35 seconds to exit before the update takes effect. New CLI detects outdated controllers and gives an explicit message.

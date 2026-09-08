@@ -25,7 +25,14 @@ export function normalizeUrl(input) {
   return url.href;
 }
 export function selection(request) {
-  const device = devices.find(d => d.id === request.device);
+  let device = devices.find(d => d.id === request.device);
+  if(request.device === 'custom') {
+    const width=Number(request.width),height=Number(request.height),dpr=Number(request.dpr ?? 1);
+    if(!Number.isInteger(width)||!Number.isInteger(height)||width<100||height<100||width>3840||height>3840||!Number.isFinite(dpr)||dpr<1||dpr>4)
+      throw new Error('Custom size must be 100–3840 CSS pixels, with pixel ratio 1–4.');
+    const mobile=request.mobile===true;
+    device={id:'custom',name:mobile?'Custom phone':'Custom desktop',group:'Custom',skin:mobile?'android':'desktop',width,height,dpr,mobile};
+  }
   if (!device) throw new Error('Unknown device. Choose a device from the list.');
   return { ...device, width: request.landscape ? device.height : device.width,
     height: request.landscape ? device.width : device.height, url: normalizeUrl(request.url) };
@@ -88,7 +95,7 @@ function hyprWindows() {
 async function serve(state, headless) {
   const profile = join(state, 'browser');
   await mkdir(profile, {recursive:true, mode:0o700});
-  let cdp, viewerCdp, host, lastUsed = Date.now();
+  let cdp, viewerCdp, host, phoneRemote, lastUsed = Date.now();
   const viewerTargets = new Map();
   const sessions = new Map();
   const contexts = new Map();
@@ -110,7 +117,7 @@ async function serve(state, headless) {
   async function preview(request) {
     const device = selection(request);
     const existingWindows = new Set(headless ? [] : hyprWindows().map(w => w.address));
-    linker.setEnabled(!!request.linked);
+    if(request.linked)linker.setEnabled(true);
     if (!cdp || cdp.ws.readyState !== WebSocket.OPEN) {
       cdp = await connectBrowser(profile, true);
       sessions.clear(); contexts.clear(); muted.clear(); linker.reset(); viewerTargets.clear(); cdp.onEvent = onEvent;
@@ -264,7 +271,14 @@ async function serve(state, headless) {
         try {
           const request = JSON.parse(buffer.split('\n')[0]);
           if (request.link !== undefined) linker.setEnabled(request.link === 'on');
-          const result = request.link !== undefined ? {status:'linked', enabled:linked, reason:linker.reason} : request.ping ? {status:'ok'} : request.close ? await closePreview() : request.inspect ? await inspectPreview(request.targetId) : await preview(request);
+          if(request.phone!==undefined) {
+            if(request.phone==='off'){await phoneRemote?.close();phoneRemote=undefined;}
+            else if(request.phone==='on'){
+              if(!host||!sessions.size)throw new Error('Open a framed preview before enabling Phone remote.');
+              if(!phoneRemote){const {PhoneRemote}=await import('./phone-remote.mjs');phoneRemote=await PhoneRemote.create({host});}
+            }else throw new Error('Use --phone on or --phone off.');
+          }
+          const result = (request.phone!==undefined||request['phone-status']) ? {status:'phone',...(phoneRemote?phoneRemote.info():{enabled:false,url:'',urls:[],qrData:''})} : request.status ? {status:'state',enabled:linked,reason:linker.reason,previewCount:sessions.size} : request.link !== undefined ? {status:'linked', enabled:linked, reason:linker.reason} : request.ping ? {status:'ok',protocol:2} : request.close ? await closePreview() : request.inspect ? await inspectPreview(request.targetId) : await preview(request);
           client.end(JSON.stringify(result) + '\n');
         } catch (error) { client.end(JSON.stringify({status:'error', error:error.message}) + '\n'); }
       });
@@ -288,7 +302,7 @@ async function serve(state, headless) {
   await chmod(socket, 0o600);
   const idle = setInterval(() => {
     if ((!cdp || cdp.ws.readyState !== WebSocket.OPEN) && Date.now() - lastUsed > 30000) {
-      clearInterval(idle); host?.shutdown(); server.close(); unlink(socket).catch(() => {});
+      clearInterval(idle); phoneRemote?.close(); host?.shutdown(); server.close(); unlink(socket).catch(() => {});
     }
   }, 5000);
 }
@@ -307,20 +321,29 @@ async function main() {
   const args = process.argv.slice(2); const opts = {};
   for (let i=0; i<args.length; i++) {
     const key = args[i];
-    if (['--landscape','--linked','--headless','--serve','--close','--list'].includes(key)) opts[key.slice(2)] = true;
-    else if (['--device','--url','--state','--link'].includes(key) && args[i+1]) opts[key.slice(2)] = args[++i];
+    if (['--mobile','--landscape','--linked','--headless','--serve','--close','--list','--status','--phone-status'].includes(key)) opts[key.slice(2)] = true;
+    else if (['--width','--height','--dpr','--device','--url','--state','--link','--phone'].includes(key) && args[i+1]) opts[key.slice(2)] = args[++i];
     else throw new Error('Usage: node viewport.mjs --device ID --url URL [--landscape] [--list]');
   }
+  if(opts.phone!==undefined&&!['on','off'].includes(opts.phone))throw new Error('Use --phone on or --phone off.');
   if (opts.list) { console.log(JSON.stringify(devices)); return; }
   if (opts.link !== undefined && !['on','off'].includes(opts.link)) throw new Error('Use --link on or --link off.');
-  if (!opts.serve && !opts.close && opts.link === undefined) selection(opts);
+  if (!opts.serve && !opts.close && !opts.status && !opts['phone-status'] && opts.phone===undefined && opts.link === undefined) selection(opts);
   const state = resolve(opts.state || join(process.env.XDG_CACHE_HOME || join(homedir(), '.cache'), 'screenhop-framed'));
   await mkdir(state, {recursive:true, mode:0o700});
   if (opts.serve) { await serve(state, opts.headless); return; }
   const socket = join(state, 'controller.sock'); let response;
-  try { response = await rpc(socket, opts); } catch (error) {
+  try {
+    const running=await rpc(socket,{ping:true});
+    if(running.protocol!==2&&!opts.close)throw new Error('ScreenHop was updated. Save your work, close all ScreenHop previews, wait 35 seconds, then reopen them to activate the update.');
+    response = await rpc(socket, opts);
+  } catch (error) {
     if (!['ENOENT','ECONNREFUSED'].includes(error.code)) throw error;
-    if (opts.close || opts.link !== undefined) { console.log(JSON.stringify({status:opts.close ? 'closed' : 'linked', enabled:opts.link === 'on'})); return; }
+    if(opts.phone!==undefined||opts['phone-status']) {
+      if(opts.phone==='on')throw new Error('Open a framed preview before enabling Phone remote.');
+      console.log(JSON.stringify({status:'phone',enabled:false,url:'',urls:[],qrData:''}));return;
+    }
+    if (opts.close || opts.status || opts.link !== undefined) { console.log(JSON.stringify({status:opts.close ? 'closed' : opts.status ? 'state' : 'linked', enabled:opts.link === 'on',reason:'',previewCount:0})); return; }
     const log = openSync(join(state, 'controller.log'), 'a', 0o600);
     const child = spawn(process.execPath, [fileURLToPath(import.meta.url), '--serve', '--state', state, ...(opts.headless ? ['--headless'] : [])], {detached:true, stdio:['ignore',log,log]});
     closeSync(log); child.unref();

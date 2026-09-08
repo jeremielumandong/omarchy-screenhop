@@ -4,7 +4,7 @@ Pick a device. Open its browser preview. Link your screens.
 
 **Local development build — not published.**
 
-ScreenHop is an Omarchy shell plugin with 16 searchable phone, tablet, and computer presets. Each selection opens a separate preview at the device's CSS dimensions.
+ScreenHop is an Omarchy shell plugin with 66 searchable presets across 10 categories and custom viewport sizes. Each selection opens a separate preview at the device's CSS dimensions.
 
 ![ScreenHop centered device preview](preview.png)
 
@@ -16,13 +16,17 @@ Click **ScreenHop** in the bar, enter your website URL (including localhost), an
 - **Device frame off in the picker:** opens a direct Chromium window with the device and resolution in its title. This retains native browser controls and is preferable for sign-in troubleshooting or features the streamed viewer does not support.
 - **Portrait/rotation:** swaps width and height before opening another preview.
 
+Use category chips to browse Apple phones, Android phones, tablets, foldables, watches, computers, TVs, kiosks, handhelds and smart panels. **Custom size** accepts 100–3840 CSS pixels per axis and pixel density 1–4, with phone touch or desktop mode. Device skins include classic/notched/island phones, camera bezels, tablets, foldables, watches, laptops and display stands. Skins are original decorative approximations, not vendor artwork; they do not change the page viewport or emulate browser/OS chrome.
+
+Specialty presets marked “responsive” are representative layouts, not certified device dimensions or hardware emulation. New branded phone/tablet profiles use [Playwright v1.55.0 device descriptors](https://github.com/microsoft/playwright/blob/v1.55.0/packages/playwright-core/src/server/deviceDescriptorsSource.json), preferring CSS screen size when supplied. Existing preset dimensions remain compatible with earlier ScreenHop sessions.
+
 Framed and direct previews use separate browser profiles. Within each mode, previews share that mode's browser cookies. Existing personal browser sessions are not imported. Named account profiles and session import are planned in [PLAN.md](PLAN.md).
 
 The frame is visual styling, not a mobile operating system or Safari emulator. Chromium remains the rendering engine. Mobile pages without a viewport meta tag can have a wider layout viewport, as on actual devices. Native file pickers, downloads, browser dialogs, drag-and-drop files and accessibility tree interaction are not exposed through the streamed frame; use direct mode for those workflows.
 
 ## Linked browsing and authentication
 
-Linking **defaults off**. Enable **Link previews** for ordinary page comparison. It mirrors matching clicks, ordinary text input and proportional page scrolling. Only trusted, same-origin link navigation is copied after loading; server redirects are never broadcast as navigation commands.
+Linking **defaults off**. Enable **Link previews** for ordinary page comparison. It mirrors matching clicks, ordinary text input and proportional page scrolling. Trusted same-origin navigation from links, buttons and clickable rows is copied after it settles, including SPA route changes. Redirects without a trusted navigation gesture are not broadcast. Opening another preview preserves the group’s linking setting.
 
 Sign-in, OAuth/OIDC callbacks, verification codes and security challenges belong to one preview. ScreenHop pauses linking on recognized authentication URLs, identity-provider hosts, credential forms, MFA fields and sign-in actions. Submit controls, passwords, files and one-time codes are not mirrored. It stays paused until you explicitly enable it after authentication pages have been left.
 
@@ -31,6 +35,14 @@ Regression coverage includes IdentityServer, Okta, Azure AD/Microsoft Entra ID, 
 Cloudflare can still challenge or reject emulated/automated browsers. ScreenHop does not bypass those checks. Cloudflare documents that headless browsers and automation are unsupported for production challenge solving: [supported browsers](https://developers.cloudflare.com/cloudflare-challenges/reference/supported-browsers/). Direct mode removes the streamed/headless view but still uses viewport emulation and is not a guarantee of challenge compatibility.
 
 Clicks match unique data-testid, id, name, aria-label or link href and skip missing/hidden elements. Embedded frames, shadow DOM and arbitrary custom controls are not synchronized. Linked actions run in each preview; use test data for actions that change application state.
+
+## Phone remote
+
+Open framed previews, then choose **Phone remote** in the ScreenHop picker. Scan the QR code using a phone on the same Wi-Fi, select a lead preview, and enable **Link previews** to control the group. No phone app or cloud account is needed. This uses a local browser controller; it does not integrate with the LocalSend app.
+
+Tap to click and swipe to scroll. For typing, tap the field inside the preview, open **Keyboard**, and type using the phone keyboard helper. Authentication still pauses linking; your phone controls the selected desktop renderer without importing a phone login session.
+
+**Stop sharing** disconnects phones and revokes the pairing URL. Sharing defaults off. The pairing URL grants control over these previews: use a trusted local network, since the connection uses local HTTP. Both devices must be reachable on the same network; guest Wi-Fi isolation or a firewall may block access. `qrencode` is optional; a copyable URL is always available.
 
 ## Requirements and local installation
 
@@ -44,7 +56,7 @@ No npm dependencies or browser extension are needed.
 bash scripts/install.sh
 ```
 
-The widget appears at the right of the bar. The installer keeps backups outside Omarchy’s plugin discovery directory and migrates older timestamped backup folders so they cannot override the current plugin. After updating, open new previews to use the new controller. Previously opened previews remain in their existing session; the older linked session was disabled during the OAuth fix.
+The widget appears at the right of the bar. The installer keeps backups outside Omarchy’s plugin discovery directory and migrates older timestamped backup folders so they cannot override the current plugin. After updating, close all ScreenHop previews and wait 35 seconds before reopening them so the previous controller exits. Opening just one new window while old previews remain open still uses that old controller. Browser profile cookies are retained.
 
 To remove the widget from the bar: `omarchy plugin disable arkane.screenhop`.
 
@@ -56,6 +68,10 @@ Framed mode uses `$XDG_CACHE_HOME/screenhop-framed` and direct mode uses `$XDG_C
 node viewport.mjs --device iphone-13 --url http://localhost:3000
 node viewport.mjs --device pixel-5 --url http://localhost:3000 --linked
 node viewport.mjs --link off
+node viewport.mjs --status
+node viewport.mjs --phone on
+node viewport.mjs --phone off
+node viewport.mjs --device custom --width 420 --height 900 --dpr 2 --mobile --url http://localhost:3000
 node native-preview.mjs --device desktop --url http://localhost:3000
 node native-preview.mjs --link off
 node viewport.mjs --list
@@ -66,7 +82,7 @@ node viewport.mjs --list
 ## Tests
 
 ```sh
-node --test tests/auth-policy.test.mjs tests/browser.test.mjs tests/viewer.test.mjs
+node --test tests/auth-policy.test.mjs tests/browser.test.mjs tests/viewer.test.mjs tests/phone-remote.test.mjs
 SCREENHOP_TEST_NATIVE=1 node --test tests/browser.test.mjs
 bash tests/ui-smoke.sh
 bash tests/install-smoke.sh

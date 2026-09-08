@@ -22,10 +22,15 @@ export class LinkedPreviews {
     if(navigation) {
       const url=event.params.frame?.url||event.params.url;
       this.urls.set(session,url);
+      const contextId=this.contexts.get(session);
+      if(contextId)this.connection().send('Runtime.evaluate',{expression:'globalThis.screenhopCheckAuth?.()',contextId},session).catch(()=>{});
       if(isAuthUrl(url)&&url!=='about:blank') {
         this.auth.add(session);this.pause('Linking paused for sign-in or a security challenge. Complete it in this preview only.');return;
       }
       this.auth.delete(session);
+      // An unqualified click only authorizes a same-document SPA route change.
+      // It must never lend intent to a later full-page redirect or script navigation.
+      if(event.method==='Page.frameNavigated'&&!this.pending.get(session)?.url)this.pending.delete(session);
       const intent=this.pending.get(session);
       if(intent&&!canSyncNavigation(intent.origin,url)) {this.pause('External navigation stays in this preview.');return;}
       if(event.method==='Page.navigatedWithinDocument')this.finishNavigation(session);
@@ -33,9 +38,15 @@ export class LinkedPreviews {
     if(event.method==='Page.loadEventFired') {this.muted.set(session,Date.now()+100);this.finishNavigation(session);}
     if(event.method!=='Runtime.bindingCalled'||event.params.name!=='screenhopEvent'||this.contexts.get(session)!==event.params.executionContextId)return;
     let data;try{data=JSON.parse(event.params.payload)}catch{return}
+    if(data.kind==='auth-clear') {this.auth.delete(session);return;}
     if(data.kind==='auth') {this.auth.add(session);this.pause('Linking paused for sign-in, verification, or a security challenge. Complete it in this preview only.');return;}
     if(!this.enabled||Date.now()<(this.muted.get(session)||0))return;
     if(JSON.stringify(data).length>10000)return;
+    if(data.kind==='gesture') {
+      const origin=this.urls.get(session);
+      if(!isAuthUrl(origin))this.pending.set(session,{origin,started:Date.now()});
+      return;
+    }
     if(data.kind==='navigate') {
       if(!canSyncNavigation(this.urls.get(session),data.url)){this.pause('Sign-in and external navigation stay in this preview.');return;}
       this.pending.set(session,{url:data.url,origin:this.urls.get(session),started:Date.now()});return;
@@ -56,10 +67,10 @@ export class LinkedPreviews {
     const generation=this.generation;
     setTimeout(()=>{
       if(!this.enabled||this.generation!==generation||this.pending.get(session)!==intent)return;
-      if(Date.now()-intent.started>10000){this.pending.delete(session);return;}
+      if(Date.now()-intent.started>(intent.url?10000:2500)){this.pending.delete(session);return;}
       this.pending.delete(session);
       const url=this.urls.get(session);
-      if(!canSyncNavigation(intent.origin,url))return;
+      if(!canSyncNavigation(intent.origin,url)||url===intent.origin)return;
       this.queue=this.queue.then(async()=>{
         for(const destination of this.sessions.values()) {
           if(!this.enabled||this.generation!==generation)return;

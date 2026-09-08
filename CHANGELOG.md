@@ -11,3 +11,7 @@ Local development version; not published.
 
 - Fixed installer backups shadowing the live plugin with version 0.1.0. Backups now live outside plugin discovery.
 - Framed previews are borderless app windows, centered horizontally and vertically, with hover/focus tools.
+
+- Fixed linked-state reporting, SPA navigation from buttons/rows, and authentication pause recovery after same-document callback cleanup.
+- Added opt-in phone remote with QR pairing, touch/keyboard control, and immediate disconnect.
+- Added device categories, custom viewport sizes, and original decorative device skins.

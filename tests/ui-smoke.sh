@@ -11,16 +11,31 @@ cp "$plugin_dir/Widget.qml" "$plugin_dir/devices.json" "$test_dir/"
 cp "$plugin_dir/tests/ui-smoke.qml" "$test_dir/shell.qml"
 cat > "$test_dir/viewport.mjs" <<'JS'
 import assert from 'node:assert/strict';
+import {existsSync, writeFileSync} from 'node:fs';
 const args = process.argv.slice(2);
 const native = process.argv[1].endsWith("native-preview.mjs");
-if (args[0] === '--link') {
+if (args[0] === '--phone-status' || args[0] === '--phone') {
+    assert.equal(native, false);
+    if (args[0] === '--phone') assert.ok(['on', 'off'].includes(args[1]));
+    else assert.deepEqual(args, ['--phone-status']);
+    const enabled = args[1] === 'on';
+    console.log(JSON.stringify({status: 'phone', enabled, url: enabled ? 'http://192.168.1.2:8000/remote#test-token' : '', urls: [], qrData: ''}));
+} else if (args[0] === '--status') {
+    assert.deepEqual(args, ['--status']);
+    console.log(JSON.stringify({status: 'state', enabled: false, previewCount: 0}));
+} else if (args[0] === '--link') {
     assert.deepEqual(args, ['--link', args[1]]);
     assert.ok(['on', 'off'].includes(args[1]));
     if (native) assert.equal(args[1], 'on');
-    console.log(JSON.stringify({linked: args[1] === 'on'}));
+    const denied = !native && args[1] === 'on' && existsSync(process.argv[1] + '.auth');
+    if (!native && args[1] === 'on') writeFileSync(process.argv[1] + '.auth', '1');
+    console.log(JSON.stringify({status: 'linked', enabled: args[1] === 'on' && !denied, reason: denied ? 'Linking paused during sign in.' : ''}));
 } else {
     const shared = ['--device', args[1], '--url', 'https://example.com/path?q=a&text=two words'];
-    if (args[1] === 'iphone-se') {
+    if (args[1] === 'custom') {
+        assert.deepEqual(args, [...shared, '--width', '428', '--height', '926', '--dpr', '3', ...(!native ? ['--mobile'] : [])]);
+        console.log(JSON.stringify({status: 'ready', linked: false}));
+    } else if (args[1] === 'iphone-se') {
         assert.equal(native, false);
         assert.deepEqual(args, [...shared, '--landscape', '--linked']);
         console.log(JSON.stringify({status: 'ready', linked: false, reason: 'Linking paused during sign in.'}));

@@ -10,6 +10,10 @@ import { CDP, rpc, normalizeUrl, selection } from '../viewport.mjs';
 const exec = promisify(execFile);
 const helper = new URL(process.env.SCREENHOP_TEST_NATIVE ? '../native-preview.mjs' : '../viewport.mjs', import.meta.url).pathname;
 test('URL and device validation', () => {
+  const custom=selection({device:'custom',width:'420',height:'900',dpr:'2',mobile:true,url:'localhost:3000'});
+  assert.equal(custom.width,420);assert.equal(custom.dpr,2);assert.equal(custom.mobile,true);
+  for(const width of ['NaN',99,3841,1.5])assert.throws(()=>selection({device:'custom',width,height:900,url:'localhost'}));
+  assert.throws(()=>selection({device:'custom',width:420,height:900,dpr:10,url:'localhost'}));
   assert.equal(normalizeUrl('localhost:3000/path'), 'http://localhost:3000/path');
   assert.equal(normalizeUrl('example.com'), 'https://example.com/');
   assert.throws(() => normalizeUrl('file:///etc/passwd'));
@@ -76,6 +80,28 @@ test('independent device windows, persistent viewports, rotation and navigation'
     await cdp.send('Page.navigate',{url:url+'/independent'},sourceSession);
     await new Promise(r=>setTimeout(r,400));
     assert.equal(await evaluate(otherSession,'location.pathname'),'/linked');
+    await run('--link','on');
+    await launch('--device','iphone-se','--url',url);
+    assert.equal(JSON.parse((await run('--status')).stdout).enabled,true,'opening another preview must preserve linking');
+    async function spaClick(path,tag='button') {
+      await evaluate(sourceSession,'scrollTo(0,0);document.body.innerHTML=""');
+      await evaluate(sourceSession,`(()=>{const el=document.createElement(${JSON.stringify(tag)});el.textContent="Open booking";el.style.cssText="position:absolute;left:20px;top:100px;width:180px;height:60px";el.onclick=()=>history.pushState({},"",${JSON.stringify(path)});document.body.append(el)})()`);
+      await new Promise(r=>setTimeout(r,600));
+      await cdp.send('Input.dispatchMouseEvent',{type:'mousePressed',x:70*coordinateScale,y:130*coordinateScale,button:'left',clickCount:1},sourceSession);
+      await cdp.send('Input.dispatchMouseEvent',{type:'mouseReleased',x:70*coordinateScale,y:130*coordinateScale,button:'left',clickCount:1},sourceSession);
+      await new Promise(r=>setTimeout(r,600));
+      assert.equal(await evaluate(otherSession,'location.pathname'),path);
+    }
+    await spaClick('/spa-button');
+    await spaClick('/spa-row','div');
+    await cdp.send('Page.navigate',{url:url+'/finish?code=fixture&state=fixture'},sourceSession);
+    await new Promise(r=>setTimeout(r,250));
+    assert.equal(JSON.parse((await run('--link','on')).stdout).enabled,false);
+    await evaluate(sourceSession,'history.replaceState({},"","/after-login")');
+    await new Promise(r=>setTimeout(r,250));
+    assert.equal(JSON.parse((await run('--link','on')).stdout).enabled,true,'SPA callback cleanup allows explicit relinking');
+    await spaClick('/after-login-details');
+    console.log('SPA evidence: unnamed buttons, clickable rows, preserved linking on launch, and same-document OAuth recovery passed.');
     if (process.env.SCREENHOP_TEST_HEADFUL) {
       const windows = JSON.parse((await exec('hyprctl',['-j','clients'])).stdout).filter(w=>/screenhop/i.test(w.class));
       assert.ok(windows.length >= 4);

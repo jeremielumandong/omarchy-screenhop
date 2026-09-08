@@ -13,9 +13,20 @@ BarWidget {
     property bool popoutSwitchClosing: false
     property var devices: []
     property string query: ""
+    property string category: ""
+    property bool customExpanded: false
+    property string customWidth: "390"
+    property string customHeight: "844"
+    property string customDpr: "2"
+    property bool customMobile: true
     property string website: "http://localhost:3000"
     property bool landscape: false
     property bool deviceFrame: true
+    property bool phoneEnabled: false
+    property string phoneUrl: ""
+    property string phoneQrData: ""
+    property string phoneReason: ""
+    property bool phoneReplyReceived: false
     property bool linked: false
     property bool pendingLinked: false
     property bool launchReplyReceived: false
@@ -24,7 +35,7 @@ BarWidget {
     property string selectedId: ""
     property string status: "Choose a device to open a browser preview."
     property string launchError: ""
-    readonly property bool busy: launcher.running || linkUpdater.running
+    readonly property bool busy: launcher.running || linkUpdater.running || phoneUpdater.running
     readonly property string pluginDirectory: decodeURIComponent(Qt.resolvedUrl(".").toString().replace(/^file:\/\//, "")).replace(/\/?$/, "/")
     readonly property var groups: {
         var result = [];
@@ -37,15 +48,26 @@ BarWidget {
         var needle = query.trim().toLowerCase();
         return devices.filter(function(device) {
             return (!group || device.group === group)
+                && (!category || device.group === category)
                 && (!needle || (device.name + " " + device.group + " " + device.width + "x" + device.height).toLowerCase().indexOf(needle) >= 0);
         });
     }
-    function open() { opened = true; }
+    function open() { opened = true; refreshLinked(); refreshPhone(); }
     function close() { opened = false; }
     function closeForPopoutSwitch() {
         popoutSwitchClosing = true;
         close();
         Qt.callLater(function() { root.popoutSwitchClosing = false; });
+    }
+    function launchCustom() {
+        var width = Number(customWidth), height = Number(customHeight), dpr = Number(customDpr);
+        if (!isFinite(width) || width < 100 || width > 3840 || Math.floor(width) !== width
+            || !isFinite(height) || height < 100 || height > 3840 || Math.floor(height) !== height
+            || !isFinite(dpr) || dpr < 1 || dpr > 4) {
+            launchError = "Use whole-pixel dimensions from 100–3840 and pixel density from 1–4.";
+            return;
+        }
+        launch({id: "custom", name: customMobile ? "Custom phone" : "Custom desktop", width: width, height: height, dpr: dpr, mobile: customMobile});
     }
     function launch(device) {
         if (busy) return;
@@ -55,10 +77,22 @@ BarWidget {
         status = "Opening " + device.name + "…";
         launchReplyReceived = false;
         var args = ["node", pluginDirectory + helperName, "--device", device.id, "--url", website.trim()];
+        if (device.id === "custom") {
+            args.push("--width", String(device.width), "--height", String(device.height), "--dpr", String(device.dpr));
+            if (device.mobile) args.push("--mobile");
+        }
         if (landscape) args.push("--landscape");
         if (linked) args.push("--linked");
         launcher.command = args;
         launcher.running = true;
+    }
+    function refreshLinked() {
+        if (busy) return;
+        pendingLinked = linked;
+        linkReplyReceived = false;
+        launchError = "";
+        linkUpdater.command = ["node", pluginDirectory + helperName, "--status"];
+        linkUpdater.running = true;
     }
     function setLinked(value) {
         if (busy) return;
@@ -67,6 +101,43 @@ BarWidget {
         launchError = "";
         linkUpdater.command = ["node", pluginDirectory + helperName, "--link", value ? "on" : "off"];
         linkUpdater.running = true;
+    }
+    function refreshPhone() {
+        if (phoneUpdater.running) return;
+        phoneReplyReceived = false;
+        phoneUpdater.command = ["node", pluginDirectory + "viewport.mjs", "--phone-status"];
+        phoneUpdater.running = true;
+    }
+    function setPhone(value) {
+        if (busy || (value && !deviceFrame)) return;
+        phoneReason = "";
+        phoneReplyReceived = false;
+        phoneUpdater.command = ["node", pluginDirectory + "viewport.mjs", "--phone", value ? "on" : "off"];
+        phoneUpdater.running = true;
+    }
+    Process {
+        id: phoneUpdater
+        stdout: SplitParser {
+            onRead: data => {
+                try {
+                    var message = JSON.parse(data);
+                    if (message.status === "phone" && typeof message.enabled === "boolean") {
+                        root.phoneReplyReceived = true;
+                        root.phoneEnabled = message.enabled;
+                        root.phoneUrl = message.enabled ? (message.url || "") : "";
+                        root.phoneQrData = message.enabled ? (message.qrData || "") : "";
+                        root.phoneReason = message.reason || "";
+                    }
+                } catch (error) { /* Ignore diagnostic lines. */ }
+            }
+        }
+        stderr: SplitParser {
+            onRead: data => { if (data.trim()) root.phoneReason = data.trim(); }
+        }
+        onExited: (exitCode, exitStatus) => {
+            if ((exitCode !== 0 || !root.phoneReplyReceived) && !root.phoneReason)
+                root.phoneReason = "Could not update phone sharing.";
+        }
     }
     FileView {
         path: root.pluginDirectory + "devices.json"
@@ -108,10 +179,11 @@ BarWidget {
             onRead: data => {
                 try {
                     var message = JSON.parse(data);
-                    if (typeof message.linked === "boolean") {
-                        root.pendingLinked = message.linked;
+                    var enabled = typeof message.enabled === "boolean" ? message.enabled : message.linked;
+                    if (typeof enabled === "boolean") {
+                        root.pendingLinked = enabled;
                         root.linkReplyReceived = true;
-                        root.status = message.reason || (message.linked ? "Previews linked: navigation, clicks, typing and scrolling sync." : "Previews unlinked. Each window works independently.");
+                        root.status = message.reason || (enabled ? "Previews linked: navigation, clicks, typing and scrolling sync." : "Previews unlinked. Each window works independently.");
                     }
                 } catch (error) { /* Ignore diagnostic lines. */ }
             }
@@ -120,9 +192,10 @@ BarWidget {
             onRead: data => { if (data.trim()) root.launchError = data.trim(); }
         }
         onExited: (exitCode, exitStatus) => {
-            if (exitCode === 0) {
+            if (exitCode === 0 && root.linkReplyReceived) {
                 root.linked = root.pendingLinked;
-                if (!root.linkReplyReceived) root.status = root.linked ? "Previews linked: navigation, clicks, typing and scrolling sync." : "Previews unlinked. Each window works independently.";
+            } else if (exitCode === 0) {
+                root.launchError = "Could not read the current linking state.";
             } else if (!root.launchError) {
                 root.launchError = "Could not update linked previews (exit " + exitCode + ").";
             }
@@ -206,9 +279,8 @@ BarWidget {
                     enabled: !root.busy
                     onClicked: {
                         root.deviceFrame = !root.deviceFrame;
-                        root.linked = false;
-                        root.launchError = "";
-                        root.status = root.deviceFrame ? "Device frame selected for new previews." : "Direct browser selected for new previews.";
+                        root.refreshLinked();
+                        root.refreshPhone();
                     }
                 }
                 Label {
@@ -239,6 +311,61 @@ BarWidget {
                     opacity: 0.65
                 }
             }
+            Row {
+                width: parent.width
+                spacing: Style.space(8)
+                Button {
+                    id: phoneButton
+                    text: root.phoneEnabled ? "Stop sharing" : "Phone remote"
+                    selected: root.phoneEnabled
+                    bordered: true
+                    focusable: true
+                    enabled: !root.busy && (root.deviceFrame || root.phoneEnabled)
+                    onClicked: root.setPhone(!root.phoneEnabled)
+                }
+                Label {
+                    width: parent.width - phoneButton.width - parent.spacing
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: root.phoneReason || (root.deviceFrame ? "Use your phone on the same Wi-Fi." : "Phone remote requires Device frame.")
+                    font.pixelSize: Style.font.bodySmall
+                    opacity: 0.75
+                }
+            }
+            Row {
+                visible: root.phoneEnabled
+                width: parent.width
+                spacing: Style.space(12)
+                Image {
+                    id: phoneQr
+                    visible: root.phoneQrData.length > 0
+                    width: visible ? Style.space(124) : 0
+                    height: width
+                    source: root.phoneQrData
+                    fillMode: Image.PreserveAspectFit
+                    smooth: false
+                    Accessible.name: "Scan to open the ScreenHop phone remote"
+                }
+                Column {
+                    width: parent.width - (phoneQr.visible ? phoneQr.width + parent.spacing : 0)
+                    spacing: Style.space(6)
+                    Label {
+                        width: parent.width
+                        text: "Open this address on your phone, choose the lead preview, and enable linking to control the other previews."
+                        font.pixelSize: Style.font.bodySmall
+                    }
+                    TextEdit {
+                        width: parent.width
+                        text: root.phoneUrl
+                        color: Color.foreground
+                        font.family: Style.font.family
+                        font.pixelSize: Style.font.bodySmall
+                        readOnly: true
+                        selectByMouse: true
+                        wrapMode: TextEdit.WrapAnywhere
+                        Accessible.name: "Phone remote address"
+                    }
+                }
+            }
             Label {
                 id: statusLabel
                 width: parent.width
@@ -265,6 +392,76 @@ BarWidget {
                     id: catalog
                     width: scroll.width
                     spacing: Style.space(18)
+                    Flow {
+                        width: parent.width
+                        spacing: Style.space(6)
+                        Repeater {
+                            model: [""].concat(root.groups)
+                            delegate: Button {
+                                required property string modelData
+                                text: modelData || "All devices"
+                                selected: root.category === modelData
+                                bordered: true
+                                focusable: true
+                                onClicked: { root.category = modelData; scroll.contentY = 0; }
+                            }
+                        }
+                    }
+                    Button {
+                        text: root.customExpanded ? "− Custom size" : "+ Custom size"
+                        selected: root.customExpanded
+                        bordered: true
+                        focusable: true
+                        onClicked: root.customExpanded = !root.customExpanded
+                    }
+                    Column {
+                        visible: root.customExpanded
+                        width: parent.width
+                        spacing: Style.space(8)
+                        Label { width: parent.width; text: "Viewport width × height in CSS pixels; density controls the pixel ratio."; font.pixelSize: Style.font.bodySmall }
+                        Row {
+                            width: parent.width
+                            spacing: Style.space(8)
+                            TextField {
+                                width: (parent.width - 2 * parent.spacing) / 3
+                                text: root.customWidth
+                                placeholderText: "Width"
+                                Accessible.name: "Custom width in CSS pixels"
+                                onTextEdited: root.customWidth = text
+                            }
+                            TextField {
+                                width: (parent.width - 2 * parent.spacing) / 3
+                                text: root.customHeight
+                                placeholderText: "Height"
+                                Accessible.name: "Custom height in CSS pixels"
+                                onTextEdited: root.customHeight = text
+                            }
+                            TextField {
+                                width: (parent.width - 2 * parent.spacing) / 3
+                                text: root.customDpr
+                                placeholderText: "Density"
+                                Accessible.name: "Custom pixel density"
+                                onTextEdited: root.customDpr = text
+                            }
+                        }
+                        Row {
+                            spacing: Style.space(8)
+                            Button {
+                                text: root.customMobile ? "Phone / touch" : "Desktop"
+                                selected: root.customMobile
+                                bordered: true
+                                focusable: true
+                                onClicked: root.customMobile = !root.customMobile
+                            }
+                            Button {
+                                text: "Open custom preview"
+                                bordered: true
+                                focusable: true
+                                enabled: !root.busy
+                                onClicked: root.launchCustom()
+                            }
+                        }
+                    }
                     Label { visible: root.matching("").length === 0; width: parent.width; text: root.devices.length ? "No devices match your search." : "Loading devices…" }
                     Repeater {
                         model: root.groups

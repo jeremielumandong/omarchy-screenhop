@@ -65,5 +65,5 @@ test('login actions pause before mirroring and retain website event handling',()
 test('submit controls never mirror; ordinary anchors emit only navigation',()=> {
   const h=harness();h.click(new h.Element({submit:true,text:'Save'}));assert.equal(h.events.length,0);
   h.click(new h.Element({tag:'a',href:'https://app.test/cart'}));
-  assert.deepEqual(h.events.map(e=>e.kind),['navigate']);assert.equal(h.events[0].url,'https://app.test/cart');
+  assert.deepEqual(h.events.map(e=>e.kind),['gesture','navigate']);assert.equal(h.events[1].url,'https://app.test/cart');
 });
