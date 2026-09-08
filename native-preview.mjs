@@ -8,7 +8,6 @@ import { homedir } from 'node:os';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { LinkedPreviews } from './linked-previews.mjs';
-import { PreviewHost, inputCommand } from './preview-host.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 export const devices = JSON.parse(await readFile(join(here, 'devices.json'), 'utf8'));
@@ -88,23 +87,14 @@ function hyprWindows() {
 async function serve(state, headless) {
   const profile = join(state, 'browser');
   await mkdir(profile, {recursive:true, mode:0o700});
-  let cdp, viewerCdp, host, lastUsed = Date.now();
-  const viewerTargets = new Map();
+  let cdp, lastUsed = Date.now();
   const sessions = new Map();
   const contexts = new Map();
   const muted = new Map();
   let linked = false;
   const syncScript = await readFile(join(here, 'sync.js'), 'utf8');
-  const linker = new LinkedPreviews({connection:()=>cdp,sessions,contexts,muted,state:(value,reason)=>{linked=value;host?.setLinked(value,reason);}});
+  const linker = new LinkedPreviews({connection:()=>cdp,sessions,contexts,muted,state:(value,reason)=>{linked=value;}});
   function onEvent(event) {
-    if (event.method === 'Page.screencastFrame') {
-      host?.frame(event.sessionId,event.params.data);
-      cdp.send('Page.screencastFrameAck',{sessionId:event.params.sessionId},event.sessionId).catch(()=>{});return;
-    }
-    if ((event.method==='Page.frameNavigated'&&!event.params.frame.parentId)||event.method==='Page.navigatedWithinDocument') {
-      const id=[...sessions].find(([,sid])=>sid===event.sessionId)?.[0];
-      if(id)host?.update(id,{url:event.params.frame?.url||event.params.url});
-    }
     linker.handle(event);
   }
   async function preview(request) {
@@ -112,26 +102,22 @@ async function serve(state, headless) {
     const existingWindows = new Set(headless ? [] : hyprWindows().map(w => w.address));
     linker.setEnabled(!!request.linked);
     if (!cdp || cdp.ws.readyState !== WebSocket.OPEN) {
-      cdp = await connectBrowser(profile, true);
-      sessions.clear(); contexts.clear(); muted.clear(); linker.reset(); viewerTargets.clear(); cdp.onEvent = onEvent;
-    }
-    if (!host) host = await PreviewHost.create({input:relayInput,action:viewerAction});
-    host.setLinked(linked);
-    if (!viewerCdp || viewerCdp.ws.readyState !== WebSocket.OPEN) {
-      viewerCdp = await connectBrowser(join(state,'viewer-browser'),headless);
-      viewerCdp.onEvent = event => {
-        if (event.method === 'Target.targetDestroyed') {
-          const source = viewerTargets.get(event.params.targetId);
-          if (source) {
-            viewerTargets.delete(event.params.targetId); host.remove(source);
-            const session=sessions.get(source); sessions.delete(source); linker.remove(session);
-            cdp.send('Target.closeTarget',{targetId:source}).catch(()=>{});
-            if (!sessions.size) { cdp.send('Browser.close').catch(()=>{}); viewerCdp.send('Browser.close').catch(()=>{}); }
-          }
-        }
-      };
-      await viewerCdp.send('Target.setDiscoverTargets',{discover:true});
-      viewerCdp.ws.addEventListener('close',()=>{cdp?.send('Browser.close').catch(()=>{});});
+      let url = await endpoint(profile);
+      if (!url) {
+        const log = openSync(join(state, 'browser.log'), 'a', 0o600);
+        const child = spawn(browserExecutable(), [
+          `--user-data-dir=${profile}`, '--remote-debugging-address=127.0.0.1', '--remote-debugging-port=0',
+          '--no-first-run', '--no-default-browser-check', '--disable-session-crashed-bubble',
+          '--class=screenhop', '--window-size=500,850', '--no-startup-window', ...(headless ? ['--headless=new'] : [])
+        ], {detached:true, stdio:['ignore',log,log]});
+        closeSync(log);
+        let failure;
+        child.on('error', error => { failure = error; });
+        child.unref();
+        for (let i = 0; i < 100 && !url; i++) { if (failure) throw failure; await delay(100); url = await endpoint(profile); }
+        if (!url) throw new Error('Browser did not start. See ' + join(state, 'browser.log'));
+      }
+      cdp = await CDP.connect(url); sessions.clear(); contexts.clear(); muted.clear(); linker.reset(); cdp.onEvent = onEvent;
     }
     const targets = await cdp.send('Target.getTargets');
     for (const id of sessions.keys()) {
@@ -144,10 +130,35 @@ async function serve(state, headless) {
     await cdp.send('Page.enable',{},sessionId);
     await cdp.send('Runtime.enable',{},sessionId);
     await cdp.send('Runtime.addBinding',{name:'screenhopEvent',executionContextName:'screenhop'},sessionId);
-    await cdp.send('Page.addScriptToEvaluateOnNewDocument',{source:syncScript,worldName:'screenhop'},sessionId);
+    const label = 'ScreenHop · ' + device.name + ' · ' + device.width + ' × ' + device.height + ' | ';
+    const titleScript = '(()=>{const prefix=' + JSON.stringify(label) + ';const update=()=>{if(!document.title.startsWith(prefix))document.title=prefix+document.title;};new MutationObserver(update).observe(document,{childList:true,subtree:true,characterData:true});update();})();';
+    await cdp.send('Page.addScriptToEvaluateOnNewDocument',{source:syncScript+'\n'+titleScript,worldName:'screenhop'},sessionId);
+    let previewAddress;
+    if (!headless && process.env.HYPRLAND_INSTANCE_SIGNATURE) {
+      for (let attempt = 0; attempt < 20; attempt++) {
+        const window = hyprWindows().find(w => !existingWindows.has(w.address) && /screenhop/i.test(w.class));
+        if (window && /^0x[0-9a-f]+$/.test(window.address)) {
+          previewAddress = window.address;
+          try { execFileSync('hyprctl',['dispatch', 'hl.dsp.window.float({action="set",window="address:' + window.address + '"})'],{stdio:'pipe',timeout:2000}); }
+          catch (error) { console.error('Could not float preview:',error.message); }
+          await delay(100);
+          break;
+        }
+        await delay(50);
+      }
+    }
+    // Display scaling fits large devices on the desktop without changing their CSS viewport.
+    const scale = Math.min(1, 1100 / device.width, 780 / device.height);
+    const window = await cdp.send('Browser.getWindowForTarget', {targetId});
+    await cdp.send('Browser.setWindowBounds', {windowId:window.windowId, bounds:{windowState:'normal'}});
+    await cdp.send('Browser.setWindowBounds', {windowId:window.windowId, bounds:{width:Math.max(360, Math.ceil(device.width * scale)), height:Math.ceil(device.height * scale) + 60}});
+    if (previewAddress) {
+      try { execFileSync('hyprctl',['dispatch', 'hl.dsp.window.resize({window="address:' + previewAddress + '",x=' + Math.max(360,Math.ceil(device.width*scale)) + ',y=' + (Math.ceil(device.height*scale)+100) + ',relative=false})'],{stdio:'pipe',timeout:2000}); }
+      catch (error) { console.error('Could not resize preview:',error.message); }
+    }
     await cdp.send('Emulation.setDeviceMetricsOverride', {
       width:device.width, height:device.height, deviceScaleFactor:device.dpr, mobile:device.mobile,
-      screenWidth:device.width, screenHeight:device.height, scale:1,
+      screenWidth:device.width, screenHeight:device.height, scale,
       screenOrientation:{type:device.width > device.height ? 'landscapePrimary' : 'portraitPrimary', angle:device.width > device.height ? 90 : 0}
     }, sessionId);
     await cdp.send('Emulation.setTouchEmulationEnabled', {enabled:device.mobile, maxTouchPoints:device.mobile ? 5 : 1}, sessionId);
@@ -156,75 +167,11 @@ async function serve(state, headless) {
       if (result.errorText) throw new Error('Cannot load website: ' + result.errorText);
 
     }
-    await cdp.send('Emulation.setFocusEmulationEnabled',{enabled:true},sessionId);
+    await cdp.send('Page.bringToFront', {}, sessionId);
     await cdp.send('Emulation.setTouchEmulationEnabled', {enabled:device.mobile, maxTouchPoints:device.mobile ? 5 : 1}, sessionId);
-    const viewerUrl = host.register(targetId,sessionId,device,linked);
-    host.setLinked(linked,linker.reason);
-    for (let attempt=0; ; attempt++) {
-      try {
-        await cdp.send('Page.startScreencast',{format:'jpeg',quality:90,maxWidth:device.width,maxHeight:device.height},sessionId);
-        break;
-      } catch(error) { if(attempt>=20)throw error; await delay(50); }
-    }
-    const {targetId:viewerTargetId} = await viewerCdp.send('Target.createTarget',{url:viewerUrl,newWindow:true});
-    viewerTargets.set(viewerTargetId,targetId);
-    const {sessionId:viewerSession} = await viewerCdp.send('Target.attachToTarget',{targetId:viewerTargetId,flatten:true});
-    await viewerCdp.send('Page.bringToFront',{},viewerSession);
-    let previewAddress;
-    if (!headless && process.env.HYPRLAND_INSTANCE_SIGNATURE) {
-      for (let attempt=0;attempt<30;attempt++) {
-        const window=hyprWindows().find(w=>!existingWindows.has(w.address)&&/screenhop/i.test(w.class));
-        if(window && /^0x[0-9a-f]+$/.test(window.address)) {
-          previewAddress=window.address;
-          execFileSync('hyprctl',['dispatch','hl.dsp.window.float({action="set",window="address:'+previewAddress+'"})'],{stdio:'pipe',timeout:2000});
-          break;
-        }
-        await delay(50);
-      }
-    }
-    const width=device.width>device.height?1050:620;
-    const height=device.width>device.height?780:940;
-    const {windowId}=await viewerCdp.send('Browser.getWindowForTarget',{targetId:viewerTargetId});
-    await viewerCdp.send('Browser.setWindowBounds',{windowId,bounds:{width,height,windowState:'normal'}});
-    if(previewAddress)execFileSync('hyprctl',['dispatch','hl.dsp.window.resize({window="address:'+previewAddress+'",x='+width+',y='+height+',relative=false})'],{stdio:'pipe',timeout:2000});
     muted.set(sessionId, Date.now() + 500);
-    return {status:'ready', linked, reason:linker.reason, targetId, viewerTargetId, viewerUrl, device:device.name, width:device.width, height:device.height, url:device.url};
+    return {status:'ready', linked, reason:linker.reason, targetId, device:device.name, width:device.width, height:device.height, url:device.url};
   }
-  async function connectBrowser(browserProfile, runHeadless) {
-    await mkdir(browserProfile,{recursive:true,mode:0o700});
-    let url=await endpoint(browserProfile);
-    if(!url) {
-      const log=openSync(join(state,'browser.log'),'a',0o600);
-      const child=spawn(browserExecutable(),[
-        '--user-data-dir='+browserProfile,'--remote-debugging-address=127.0.0.1','--remote-debugging-port=0',
-        '--no-first-run','--no-default-browser-check','--disable-session-crashed-bubble',
-        '--class=screenhop','--no-startup-window',...(runHeadless?['--headless=new']:[])
-      ],{detached:true,stdio:['ignore',log,log]});
-      closeSync(log); child.unref(); let failure; child.on('error',error=>{failure=error});
-      for(let i=0;i<100&&!url;i++){if(failure)throw failure;await delay(100);url=await endpoint(browserProfile)}
-      if(!url)throw new Error('Browser did not start. See '+join(state,'browser.log'));
-    }
-    return CDP.connect(url);
-  }
-  async function relayInput(id,data) {
-    const record=host.records.get(id); if(!record)throw new Error('Preview closed');
-    const [method,params]=inputCommand(data,record.device.width,record.device.height);
-    record.queue=(record.queue||Promise.resolve()).catch(()=>{}).then(()=>cdp.send(method,params,record.sessionId));
-    return record.queue;
-  }
-  async function viewerAction(id,data) {
-    const sessionId=sessions.get(id); if(!sessionId)throw new Error('Preview closed');
-    if(data.action==='link') { linker.setEnabled(!!data.enabled); return; }
-    if(data.action==='reload') { await cdp.send('Page.reload',{},sessionId); return; }
-    if(['back','forward'].includes(data.action)) {
-      const history=await cdp.send('Page.getNavigationHistory',{},sessionId);
-      const entry=history.entries[history.currentIndex+(data.action==='back'?-1:1)];
-      if(entry)await cdp.send('Page.navigateToHistoryEntry',{entryId:entry.id},sessionId);
-      return;
-    }
-    throw new Error('Unknown preview action');
-  }
-
   const socket = join(state, 'controller.sock');
   // A leftover socket has no listener after a crash; an active one must never be replaced.
   try { await rpc(socket, {ping:true}); return; } catch (e) {
@@ -261,8 +208,6 @@ async function serve(state, headless) {
     return result.result.value;
   }
   async function closePreview() {
-    viewerTargets.clear();
-    if (viewerCdp?.ws.readyState === WebSocket.OPEN) await viewerCdp.send('Browser.close').catch(()=>{});
     if (cdp?.ws.readyState === WebSocket.OPEN) await cdp.send('Browser.close').catch(() => {});
     return {status:'closed'};
   }
@@ -270,7 +215,7 @@ async function serve(state, headless) {
   await chmod(socket, 0o600);
   const idle = setInterval(() => {
     if ((!cdp || cdp.ws.readyState !== WebSocket.OPEN) && Date.now() - lastUsed > 30000) {
-      clearInterval(idle); host?.shutdown(); server.close(); unlink(socket).catch(() => {});
+      clearInterval(idle); server.close(); unlink(socket).catch(() => {});
     }
   }, 5000);
 }
@@ -296,7 +241,7 @@ async function main() {
   if (opts.list) { console.log(JSON.stringify(devices)); return; }
   if (opts.link !== undefined && !['on','off'].includes(opts.link)) throw new Error('Use --link on or --link off.');
   if (!opts.serve && !opts.close && opts.link === undefined) selection(opts);
-  const state = resolve(opts.state || join(process.env.XDG_CACHE_HOME || join(homedir(), '.cache'), 'screenhop-framed'));
+  const state = resolve(opts.state || join(process.env.XDG_CACHE_HOME || join(homedir(), '.cache'), 'screenhop-native'));
   await mkdir(state, {recursive:true, mode:0o700});
   if (opts.serve) { await serve(state, opts.headless); return; }
   const socket = join(state, 'controller.sock'); let response;

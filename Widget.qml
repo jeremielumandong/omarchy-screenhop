@@ -14,8 +14,12 @@ BarWidget {
     property string query: ""
     property string website: "http://localhost:3000"
     property bool landscape: false
-    property bool linked: true
-    property bool pendingLinked: true
+    property bool deviceFrame: true
+    property bool linked: false
+    property bool pendingLinked: false
+    property bool launchReplyReceived: false
+    property bool linkReplyReceived: false
+    readonly property string helperName: deviceFrame ? "viewport.mjs" : "native-preview.mjs"
     property string selectedId: ""
     property string status: "Choose a device to open a browser preview."
     property string launchError: ""
@@ -48,7 +52,8 @@ BarWidget {
         selectedId = device.id;
         launchError = "";
         status = "Opening " + device.name + "…";
-        var args = ["node", pluginDirectory + "viewport.mjs", "--device", device.id, "--url", website.trim()];
+        launchReplyReceived = false;
+        var args = ["node", pluginDirectory + helperName, "--device", device.id, "--url", website.trim()];
         if (landscape) args.push("--landscape");
         if (linked) args.push("--linked");
         launcher.command = args;
@@ -57,8 +62,9 @@ BarWidget {
     function setLinked(value) {
         if (busy) return;
         pendingLinked = value;
+        linkReplyReceived = false;
         launchError = "";
-        linkUpdater.command = ["node", pluginDirectory + "viewport.mjs", "--link", value ? "on" : "off"];
+        linkUpdater.command = ["node", pluginDirectory + helperName, "--link", value ? "on" : "off"];
         linkUpdater.running = true;
     }
     FileView {
@@ -78,7 +84,11 @@ BarWidget {
             onRead: data => {
                 try {
                     var message = JSON.parse(data);
-                    if (message.status === "ready") root.status = "Preview is open. Choose a device to open another window.";
+                    if (message.status === "ready") {
+                        root.launchReplyReceived = true;
+                        if (typeof message.linked === "boolean") root.linked = message.linked;
+                        root.status = message.reason || "Preview is open. Choose a device to open another window.";
+                    }
                 } catch (error) { /* Ignore diagnostic lines. */ }
             }
         }
@@ -87,18 +97,31 @@ BarWidget {
         }
         onExited: (exitCode, exitStatus) => {
             if (exitCode !== 0 && !root.launchError) root.launchError = "Browser preview could not start (exit " + exitCode + ").";
-            root.status = exitCode === 0 ? "Preview is open. Choose a device to open another window." : "Unable to open preview.";
+            if (exitCode !== 0) root.status = "Unable to open preview.";
+            else if (!root.launchReplyReceived) root.status = "Preview is open. Choose a device to open another window.";
         }
     }
     Process {
         id: linkUpdater
+        stdout: SplitParser {
+            onRead: data => {
+                try {
+                    var message = JSON.parse(data);
+                    if (typeof message.linked === "boolean") {
+                        root.pendingLinked = message.linked;
+                        root.linkReplyReceived = true;
+                        root.status = message.reason || (message.linked ? "Previews linked: navigation, clicks, typing and scrolling sync." : "Previews unlinked. Each window works independently.");
+                    }
+                } catch (error) { /* Ignore diagnostic lines. */ }
+            }
+        }
         stderr: SplitParser {
             onRead: data => { if (data.trim()) root.launchError = data.trim(); }
         }
         onExited: (exitCode, exitStatus) => {
             if (exitCode === 0) {
                 root.linked = root.pendingLinked;
-                root.status = root.linked ? "Previews linked: navigation, clicks, typing and scrolling sync." : "Previews unlinked. Each window works independently.";
+                if (!root.linkReplyReceived) root.status = root.linked ? "Previews linked: navigation, clicks, typing and scrolling sync." : "Previews unlinked. Each window works independently.";
             } else if (!root.launchError) {
                 root.launchError = "Could not update linked previews (exit " + exitCode + ").";
             }
@@ -168,6 +191,31 @@ BarWidget {
                     enabled: !root.busy
                     height: search.height
                     onClicked: root.landscape = !root.landscape
+                }
+            }
+            Row {
+                width: parent.width
+                spacing: Style.space(8)
+                Button {
+                    id: frameButton
+                    text: root.deviceFrame ? "✓ Device frame" : "Device frame"
+                    selected: root.deviceFrame
+                    bordered: true
+                    focusable: true
+                    enabled: !root.busy
+                    onClicked: {
+                        root.deviceFrame = !root.deviceFrame;
+                        root.linked = false;
+                        root.launchError = "";
+                        root.status = root.deviceFrame ? "Device frame selected for new previews." : "Direct browser selected for new previews.";
+                    }
+                }
+                Label {
+                    width: parent.width - frameButton.width - parent.spacing
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: root.deviceFrame ? "Framed device preview" : "Direct browser window"
+                    font.pixelSize: Style.font.bodySmall
+                    opacity: 0.65
                 }
             }
             Row {

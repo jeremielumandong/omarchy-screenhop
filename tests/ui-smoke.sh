@@ -12,16 +12,27 @@ cp "$plugin_dir/tests/ui-smoke.qml" "$test_dir/shell.qml"
 cat > "$test_dir/viewport.mjs" <<'JS'
 import assert from 'node:assert/strict';
 const args = process.argv.slice(2);
+const native = process.argv[1].endsWith("native-preview.mjs");
 if (args[0] === '--link') {
     assert.deepEqual(args, ['--link', args[1]]);
     assert.ok(['on', 'off'].includes(args[1]));
+    if (native) assert.equal(args[1], 'on');
+    console.log(JSON.stringify({linked: args[1] === 'on'}));
 } else {
     const shared = ['--device', args[1], '--url', 'https://example.com/path?q=a&text=two words'];
-    if (args[1] === 'iphone-se') assert.deepEqual(args, [...shared, '--landscape', '--linked']);
-    else { assert.equal(args[1], 'iphone-12-mini'); assert.deepEqual(args, shared); }
-    console.log(JSON.stringify({status: 'ready'}));
+    if (args[1] === 'iphone-se') {
+        assert.equal(native, false);
+        assert.deepEqual(args, [...shared, '--landscape', '--linked']);
+        console.log(JSON.stringify({status: 'ready', linked: false, reason: 'Linking paused during sign in.'}));
+    } else {
+        assert.equal(native, true);
+        assert.equal(args[1], 'iphone-12-mini');
+        assert.deepEqual(args, shared);
+        console.log(JSON.stringify({status: 'ready', linked: false}));
+    }
 }
 JS
+cp "$test_dir/viewport.mjs" "$test_dir/native-preview.mjs"
 # A real Wayland session is required by Omarchy's KeyboardPanel component.
 timeout 15 quickshell -p "$test_dir" --no-color 2>&1 | tee "$test_dir/output.log"
 rg -q 'PASS ScreenHop catalog' "$test_dir/output.log"

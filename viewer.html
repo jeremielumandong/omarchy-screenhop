@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>ScreenHop preview</title>
+<style>
+:root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,sans-serif;color:#e8e9ed;background:#202124;font-synthesis:none}*{box-sizing:border-box}body{margin:0;height:100dvh;overflow:hidden;display:flex;flex-direction:column}button{font:inherit;color:inherit;background:transparent;border:1px solid transparent;cursor:pointer}button:focus-visible,a:focus-visible{outline:2px solid #9dbeff;outline-offset:3px}button:hover{background:#ffffff0d}button:disabled{opacity:.35;cursor:default}.topbar{flex:none;min-height:67px;border-bottom:1px solid #ffffff0a;background:#202124;display:flex;align-items:center;gap:20px;padding:12px 22px}.brand{display:flex;align-items:center;gap:10px;font-weight:650;letter-spacing:-.5px;font-size:17px;white-space:nowrap}.brand svg{color:#b4caff}.divider{height:23px;width:1px;background:#ffffff14}.device-heading{min-width:0;flex:1}.device-heading strong{display:block;font-size:13px;font-weight:600;text-overflow:ellipsis;overflow:hidden;white-space:nowrap}.device-heading span{display:block;font-size:11px;color:#9498a4;margin-top:3px;font-variant-numeric:tabular-nums}.controls{display:flex;gap:5px;align-items:center}.pill{display:flex;align-items:center;gap:7px;border:1px solid #ffffff17;border-radius:9px;padding:8px 11px;font-size:11px;white-space:nowrap}.pill[aria-pressed=true]{background:#adc5ff12;color:#c6d7ff;border-color:#abc8ff35}svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.65;stroke-linecap:round;stroke-linejoin:round;flex:none}.navigation{height:43px;display:flex;align-items:center;gap:6px;padding:5px 22px;flex:none;border-bottom:1px solid #ffffff08}.icon-button{width:30px;height:30px;border-radius:7px;display:grid;place-items:center}.url{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#a4a8b2;margin-left:7px;flex:1;user-select:all}.status{display:flex;gap:6px;align-items:center;font-size:10px;color:#9297a2;white-space:nowrap;margin-left:10px}.dot{width:5px;height:5px;border-radius:50%;background:#dbb26a}.status[data-state=live] .dot{background:#8ac7aa}.status[data-state=error] .dot{background:#e39090}.stage{position:relative;flex:1;min-height:0;overflow:hidden;display:flex;align-items:center;justify-content:center;padding:24px 24px 12px;background:radial-gradient(ellipse at 50% 46%,#2d2f34 0%,#242528 51%,#202124 90%)}.fit-box{position:relative;flex:none}.device{position:absolute;left:0;top:0;transform-origin:top left;--bezel:12px;width:calc(var(--w)*1px + var(--bezel)*2);padding:var(--bezel);border-radius:58px;background:linear-gradient(110deg,#686978 0%,#1a1a20 2%,#07080c 48%,#33343e 99%);box-shadow:0 0 0 1px #ffffff39,inset 0 0 0 3px #9999ac45,inset 0 0 0 5px #050509,0 28px 70px #0008}.device::before,.device::after{content:"";position:absolute;background:#676874;width:3px;border-radius:2px;left:-3px;top:120px;height:42px;box-shadow:0 53px #676874}.device::after{left:auto;right:-3px;top:170px;height:64px;box-shadow:none}.hardware-top{height:43px;background:#111318;border-radius:43px 43px 0 0;display:flex;align-items:center;justify-content:space-between;padding:0 25px;color:#e2e4ec;font-size:12px;font-weight:650;position:relative}.hardware-top .camera{position:absolute;left:50%;top:10px;transform:translateX(-50%);width:90px;height:25px;background:#000;border-radius:20px}.camera::after{content:"";position:absolute;right:9px;top:8px;width:8px;height:8px;border-radius:50%;background:radial-gradient(circle,#263b69,#0b101b);box-shadow:0 0 0 2px #0a0b12}.system-icons{display:flex;gap:6px;align-items:center}.system-icons svg{width:15px;height:15px}.hardware-bottom{height:27px;background:#111318;border-radius:0 0 43px 43px;display:flex;justify-content:center;align-items:center}.hardware-bottom::before{content:"";height:4px;width:100px;border-radius:5px;background:#d2d3d8}.screen{width:calc(var(--w)*1px);height:calc(var(--h)*1px);background:#15171b;position:relative;outline:none;overflow:hidden;touch-action:none}.screen:focus-visible{box-shadow:inset 0 0 0 2px #b9cfff}.screen img{display:block;width:100%;height:100%;object-fit:fill;user-select:none;-webkit-user-drag:none;pointer-events:none}.screen img:not([src]){visibility:hidden}.loading{position:absolute;inset:0;display:grid;place-items:center;color:#8e95a4;font-size:14px;pointer-events:none}.screen.has-frame .loading{display:none}.device.android{border-radius:37px;--bezel:9px;background:linear-gradient(100deg,#6f7279,#090a0d 3%,#14151b 96%,#81858e);box-shadow:0 0 0 1px #ffffff40,inset 0 0 0 3px #2f323a,0 28px 70px #0008}.android .hardware-top{height:34px;border-radius:28px 28px 0 0;padding:0 18px;font-size:11px}.android .camera{width:13px;height:13px;top:10px}.android .camera::after{width:5px;height:5px;top:4px;right:4px}.android .hardware-bottom{height:20px;border-radius:0 0 28px 28px}.android .hardware-bottom::before{width:85px;height:3px}.device.tablet{--bezel:19px;border-radius:35px}.tablet .hardware-top{height:15px;border-radius:15px 15px 0 0}.tablet .clock,.tablet .system-icons{display:none}.tablet .camera{width:7px;height:7px;top:1px}.tablet .camera::after{width:3px;height:3px;top:2px;right:2px}.tablet .hardware-bottom{height:15px;border-radius:0 0 15px 15px}.tablet .hardware-bottom::before{height:3px}.device.desktop{--bezel:11px;border-radius:15px;background:#111318;box-shadow:0 0 0 1px #ffffff30,0 25px 60px #0006}.desktop .hardware-top{height:8px;border-radius:5px 5px 0 0}.desktop .clock,.desktop .system-icons{display:none}.desktop .camera{width:4px;height:4px;top:0}.desktop .camera::after{display:none}.desktop .hardware-bottom{height:23px;border-radius:0 0 5px 5px}.desktop .hardware-bottom::before{width:6px;height:6px;background:#666c78}.desktop::before{left:calc(50% - 40px);top:100%;width:80px;height:24px;background:linear-gradient(#363942,#24262c);box-shadow:none;border-radius:0}.desktop::after{left:calc(50% - 94px);right:auto;top:calc(100% + 23px);width:188px;height:7px;background:#434751;box-shadow:0 5px 10px #0004;border-radius:10px 10px 3px 3px}.device.bare{--bezel:0px;border-radius:2px;padding:0;box-shadow:0 0 0 1px #ffffff20,0 15px 45px #0004;background:none}.bare .hardware-top,.bare .hardware-bottom,.bare::before,.bare::after{display:none}.footer{height:31px;flex:none;text-align:center;font-size:10px;letter-spacing:.15px;color:#818692;display:flex;align-items:center;justify-content:center;gap:8px}.footer .separator{color:#4a4e57}.toast{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);max-width:90%;padding:10px 15px;background:#383b43;border:1px solid #ffffff1a;color:#e6e8ef;border-radius:10px;font-size:12px;box-shadow:0 6px 25px #0005}.toast[hidden]{display:none}@media(max-width:540px){.topbar{padding:10px 12px;gap:10px}.brand .wordmark,.divider,.pill .button-label{display:none}.pill{padding:8px}.navigation{padding:5px 10px}.stage{padding:17px 12px 8px}.status{font-size:9px}}@media(prefers-reduced-motion:no-preference){button{transition:background .15s,border-color .15s}}
+.preview-group{display:flex;flex-direction:column;align-items:center;gap:16px;flex:none}.preview-label{text-align:center;line-height:1.5;height:39px;flex:none}.preview-label strong{font-size:12px;font-weight:600;display:block;color:#cbd0dc}.preview-label span{font-size:10px;color:#888f9e;font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+<header class="topbar">
+ <div class="brand"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="11" height="15" rx="2"/><path d="M9 2h10a2 2 0 0 1 2 2v12M7 17h3m6-7 3-3-3-3"/></svg><span class="wordmark">ScreenHop</span></div>
+ <span class="divider" aria-hidden="true"></span><div class="device-heading"><strong id="device-name"></strong><span id="dimensions"></span></div>
+ <div class="controls"><button id="link" class="pill" aria-pressed="false" title="Synchronize clicks, typing, navigation, and scrolling between previews" aria-label="Link previews"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10 13 4-4m-6 7-1 1a4 4 0 0 1-6-6l4-4a4 4 0 0 1 6 0m2 2 1-1a4 4 0 0 1 6 6l-4 4a4 4 0 0 1-6 0" transform="translate(1 0)"/></svg><span class="button-label">Link previews</span></button><button id="frame" class="pill" aria-pressed="true" title="Show device frame" aria-label="Show device frame"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M10 5h4m-3 14h2"/></svg><span class="button-label">Frame</span></button></div>
+</header>
+<nav class="navigation" aria-label="Preview navigation"><button class="icon-button" data-action="back" aria-label="Back" title="Back"><svg viewBox="0 0 24 24"><path d="m13 6-6 6 6 6M7 12h12"/></svg></button><button class="icon-button" data-action="forward" aria-label="Forward" title="Forward"><svg viewBox="0 0 24 24"><path d="m11 6 6 6-6 6M5 12h12"/></svg></button><button class="icon-button" data-action="reload" aria-label="Reload preview" title="Reload preview"><svg viewBox="0 0 24 24"><path d="M20 10a8 8 0 1 0-2 8M20 4v6h-6"/></svg></button><div class="url" id="url"></div><div id="status" class="status" role="status" data-state="connecting"><span class="dot"></span><span id="status-text">Connecting</span></div></nav>
+<main class="stage" id="stage"><div class="preview-group"><div class="preview-label"><strong id="preview-name"></strong><span id="preview-size"></span></div><div class="fit-box" id="fit-box"><div class="device" id="device"><div class="hardware-top" aria-hidden="true"><span class="clock">9:41</span><span class="camera"></span><span class="system-icons"><svg viewBox="0 0 20 20"><path d="M2 15v-2m4 2v-5m4 5V7m4 8V4"/></svg><svg viewBox="0 0 20 20"><path d="M2 7a12 12 0 0 1 16 0M5 10a8 8 0 0 1 10 0m-7 3a3 3 0 0 1 4 0m-2 3h.01"/></svg><svg viewBox="0 0 22 20"><rect x="1" y="5" width="16" height="10" rx="2"/><path d="M20 8v4M4 8h10v4H4z"/></svg></span></div><div class="screen" id="screen" tabindex="0" role="application" aria-label="Interactive device preview. Click to focus; keyboard and pointer input control the website."><img id="display" alt="Live website preview" draggable="false"><div class="loading" id="loading">Connecting to your preview…</div></div><div class="hardware-bottom" aria-hidden="true"></div></div></div></div><div class="toast" id="toast" role="alert" hidden></div></main>
+<footer class="footer"><span id="footer-device"></span><span class="separator">·</span><span id="scale"></span><span class="separator">·</span><span>ScreenHop 1.0.0</span></footer>
+<script>
+'use strict';
+const config = __SCREENHOP_CONFIG__;
+const $ = id => document.getElementById(id);
+const screen = $('screen'), display = $('display'), device = $('device');
+const width = Number(config.width), height = Number(config.height);
+device.style.setProperty('--w', width); device.style.setProperty('--h', height);
+const name = String(config.name || 'Custom device');
+const group = String(config.group || '').toLowerCase();
+const style = /tablet|ipad/i.test(group + ' ' + name) ? 'tablet' : /iphone|apple/i.test(name + ' ' + group) ? 'iphone' : /android|phone/i.test(group) || config.mobile ? 'android' : 'desktop';
+device.classList.add(style);
+document.title = `ScreenHop • ${name} • ${width}×${height}`;
+$('device-name').textContent = name;
+$('dimensions').textContent = `${width} × ${height} CSS px · ${config.dpr || 1}× pixel density`;
+$('footer-device').textContent = name;
+$('preview-name').textContent = name;
+$('preview-size').textContent = `${width} × ${height} CSS px`;
+let linked = Boolean(config.linked), showFrame = true, connected = false, toastTimer;
+try { showFrame = localStorage.getItem('screenhop.frame') !== 'off'; } catch {}
+function fit() {
+ const stage = $('stage'), styles = getComputedStyle(stage);
+ const availableWidth = stage.clientWidth - parseFloat(styles.paddingLeft) - parseFloat(styles.paddingRight) - 8;
+ const availableHeight = stage.clientHeight - parseFloat(styles.paddingTop) - parseFloat(styles.paddingBottom) - 63;
+ const extra = showFrame && style === 'desktop' ? 32 : 0;
+ const scale = Math.max(.01, Math.min(1, availableWidth / device.offsetWidth, availableHeight / (device.offsetHeight + extra)));
+ device.style.transform = `scale(${scale})`;
+ $('fit-box').style.width = `${device.offsetWidth * scale}px`;
+ $('fit-box').style.height = `${(device.offsetHeight + extra) * scale}px`;
+ $('scale').textContent = `${Math.round(scale * 100)}% display scale`;
+}
+function updateFrame() { device.classList.toggle('bare', !showFrame); $('frame').setAttribute('aria-pressed', String(showFrame)); fit(); }
+function updateState(state) {
+ if (state.reason) { $('url').title = state.reason; $('status-text').textContent = 'Linking paused'; toast(state.reason); }
+ if (typeof state.url === 'string') { $('url').textContent = state.url; $('url').title = state.url; }
+ if (typeof state.linked === 'boolean') linked = state.linked;
+ $('link').setAttribute('aria-pressed', String(linked));
+}
+function status(state, message) { connected = state === 'live'; $('status').dataset.state = state; $('status-text').textContent = message; }
+function toast(message) { $('toast').textContent = message; $('toast').hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { $('toast').hidden = true; }, 4500); }
+async function post(route, data) {
+ const response = await fetch(config.base + route, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+ if (!response.ok) throw new Error(`Preview request failed (${response.status})`);
+}
+// Serialize input so fast clicks, typing, and modifier releases retain their order.
+let inputQueue = Promise.resolve();
+function input(data) { if (!connected) return; inputQueue = inputQueue.then(() => post('/input', data)).catch(error => toast(error.message)); }
+async function action(data) { try { await post('/action', data); } catch(error) { toast(error.message); } }
+document.querySelectorAll('[data-action]').forEach(button => button.addEventListener('click', () => action({action:button.dataset.action})));
+$('link').addEventListener('click', () => action({action:'link',enabled:!linked}));
+$('frame').addEventListener('click', () => { showFrame = !showFrame; try { localStorage.setItem('screenhop.frame',showFrame ? 'on':'off'); } catch {} updateFrame(); });
+function point(event) { const rect = screen.getBoundingClientRect(); return {x:Math.max(0,Math.min(width - .01,(event.clientX - rect.left) * width / rect.width)),y:Math.max(0,Math.min(height - .01,(event.clientY - rect.top) * height / rect.height))}; }
+function modifiers(event) { return (event.altKey ? 1:0) | (event.ctrlKey ? 2:0) | (event.metaKey ? 4:0) | (event.shiftKey ? 8:0); }
+const buttonName = index => ['left','middle','right'][index] || 'none';
+let clickCount = 1, previousClick = {time:0,x:0,y:0,button:-1}, capturedPointer = null, lastPoint = {x:0,y:0}, heldButton = 'left';
+screen.addEventListener('pointerdown', event => {
+ if (capturedPointer !== null) return;
+ event.preventDefault(); screen.focus({preventScroll:true});
+ const p = point(event), now = performance.now();
+ clickCount = now - previousClick.time < 450 && Math.hypot(p.x - previousClick.x,p.y - previousClick.y) < 5 && event.button === previousClick.button ? Math.min(clickCount + 1,3) : 1;
+ previousClick = {...p,time:now,button:event.button}; capturedPointer = event.pointerId; lastPoint = p; heldButton = buttonName(event.button);
+ screen.setPointerCapture(event.pointerId);
+ input({kind:'mouse',type:'mousePressed',...p,button:heldButton,buttons:event.buttons,clickCount,modifiers:modifiers(event)});
+});
+let movePending = null, moveScheduled = false;
+function flushMove() { if (movePending) { input(movePending); movePending = null; } }
+screen.addEventListener('pointermove', event => {
+ lastPoint = point(event);
+ movePending = {kind:'mouse',type:'mouseMoved',...lastPoint,button:event.buttons ? heldButton:'none',buttons:event.buttons,clickCount:0,modifiers:modifiers(event)};
+ if (!moveScheduled) { moveScheduled = true; requestAnimationFrame(() => { moveScheduled = false; flushMove(); }); }
+});
+screen.addEventListener('pointerup', event => {
+ if (capturedPointer !== event.pointerId) return;
+ flushMove(); input({kind:'mouse',type:'mouseReleased',...point(event),button:heldButton,buttons:event.buttons,clickCount,modifiers:modifiers(event)});
+ capturedPointer = null; screen.releasePointerCapture(event.pointerId);
+});
+function releasePointer() { if (capturedPointer !== null) { input({kind:'mouse',type:'mouseReleased',...lastPoint,button:heldButton,buttons:0,clickCount:1,modifiers:0}); capturedPointer = null; } }
+screen.addEventListener('pointercancel', releasePointer);
+screen.addEventListener('lostpointercapture', releasePointer);
+screen.addEventListener('contextmenu', event => event.preventDefault());
+screen.addEventListener('wheel', event => { event.preventDefault(); flushMove(); const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? height : 1; input({kind:'wheel',...point(event),deltaX:event.deltaX * unit,deltaY:event.deltaY * unit,modifiers:modifiers(event)}); },{passive:false});
+const heldKeys = new Map();
+screen.addEventListener('keydown', event => {
+ // Allow the browser's paste event; the clipboard text is forwarded below.
+ if ((event.ctrlKey || event.metaKey) && event.code === 'KeyV') return;
+ if (event.isComposing || event.key === 'Process') return;
+ event.preventDefault();
+ const data = {kind:'key',type:'keyDown',key:event.key,code:event.code,keyCode:event.keyCode,modifiers:modifiers(event)};
+ if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) data.text = event.key;
+ if (event.key === 'Enter') data.text = '\r';
+ heldKeys.set(event.code, data); input(data);
+});
+screen.addEventListener('keyup', event => {
+ if ((event.ctrlKey || event.metaKey) && event.code === 'KeyV') return;
+ if (event.isComposing || event.key === 'Process') return;
+ event.preventDefault(); heldKeys.delete(event.code);
+ input({kind:'key',type:'keyUp',key:event.key,code:event.code,keyCode:event.keyCode,modifiers:modifiers(event)});
+});
+screen.addEventListener('paste', event => { event.preventDefault(); const text = event.clipboardData?.getData('text/plain'); if (text) input({kind:'text',text}); });
+screen.addEventListener('compositionend', event => { if (event.data) input({kind:'text',text:event.data}); });
+function releaseKeys() { for (const data of heldKeys.values()) { const up = {...data,type:'keyUp',modifiers:0}; delete up.text; input(up); } heldKeys.clear(); }
+screen.addEventListener('blur', releaseKeys);
+window.addEventListener('blur', () => { releaseKeys(); releasePointer(); });
+const events = new EventSource(config.base + '/events');
+events.addEventListener('open', () => status('live','Live'));
+events.addEventListener('frame', event => { try { const frame = JSON.parse(event.data); if (typeof frame.data !== 'string') return; display.src = 'data:image/jpeg;base64,' + frame.data; screen.classList.add('has-frame'); status('live','Live'); } catch { toast('Unable to display a preview frame.'); } });
+events.addEventListener('state', event => { try { updateState(JSON.parse(event.data)); } catch {} });
+events.addEventListener('error', event => { if (event.data) { try { const error = JSON.parse(event.data); toast(error.message || 'Preview unavailable.'); status('error','Unavailable'); } catch {} } else { status('connecting','Reconnecting'); } });
+window.addEventListener('pagehide', () => events.close());
+new ResizeObserver(fit).observe($('stage'));
+updateState(config); updateFrame();
+</script>
+</body>
+</html>

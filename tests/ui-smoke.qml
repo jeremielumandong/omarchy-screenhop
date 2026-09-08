@@ -28,7 +28,8 @@ ShellRoot {
             if (!widget.devices.length || widget.busy) return;
             if (stage === 0) {
                 check(widget.devices.length === 16, "Catalog load failed: " + widget.launchError);
-                check(widget.linked, "Previews should link by default");
+                check(!widget.linked, "Previews should start unlinked");
+                check(widget.deviceFrame, "Device frame should be the default");
                 widget.query = "pixel";
                 check(widget.matching("").length === 2, "Search failed");
                 widget.query = "";
@@ -44,13 +45,18 @@ ShellRoot {
                 widget.launch(widget.devices[0]);
             } else if (stage === 3) {
                 check(!widget.launchError, "Launch failed: " + widget.launchError);
-                check(widget.status.indexOf("Preview is open") === 0, "Launch status missing");
+                check(widget.status === "Linking paused during sign in.", "Auth pause reason missing");
+                check(!widget.linked, "Auth pause should clear linked state");
+                widget.deviceFrame = false;
                 widget.linked = false;
                 widget.landscape = false;
                 widget.launch(widget.devices[1]);
-            } else {
+            } else if (stage === 4) {
                 check(!widget.launchError, "Second launch failed: " + widget.launchError);
-                console.log("PASS ScreenHop catalog, search, linked toggle, launch arguments and panel creation");
+                widget.setLinked(true);
+            } else {
+                check(widget.linked && !widget.launchError, "Native link failed: " + widget.launchError);
+                console.log("PASS ScreenHop catalog, search, frame/native launches, linked toggle, auth pause and panel creation");
                 widget.close();
                 Qt.quit();
             }

@@ -2,11 +2,15 @@
   "schemaVersion": 1,
   "id": "arkane.screenhop",
   "name": "ScreenHop",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "author": "arkane",
-  "description": "Choose a device and open a responsive browser preview at its viewport size.",
-  "kinds": ["bar-widget"],
-  "entryPoints": {"barWidget": "Widget.qml"},
+  "description": "Centered device previews with linked browsing and authentication isolation for Omarchy.",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "Widget.qml"
+  },
   "barWidget": {
     "displayName": "ScreenHop",
     "category": "Development",

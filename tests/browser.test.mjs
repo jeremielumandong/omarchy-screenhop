@@ -8,7 +8,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { CDP, rpc, normalizeUrl, selection } from '../viewport.mjs';
 const exec = promisify(execFile);
-const helper = new URL('../viewport.mjs', import.meta.url).pathname;
+const helper = new URL(process.env.SCREENHOP_TEST_NATIVE ? '../native-preview.mjs' : '../viewport.mjs', import.meta.url).pathname;
 test('URL and device validation', () => {
   assert.equal(normalizeUrl('localhost:3000/path'), 'http://localhost:3000/path');
   assert.equal(normalizeUrl('example.com'), 'https://example.com/');
@@ -21,7 +21,7 @@ test('independent device windows, persistent viewports, rotation and navigation'
   const state = await mkdtemp(join(tmpdir(), 'screenhop-browser-test-'));
   const server = createServer((req,res) => {
     res.setHeader('Content-Type','text/html');
-    res.end('<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><title>ScreenHop test</title><style>body{margin:0;background:#131a25;color:white;font:24px sans-serif}div{padding:24px} @media(max-width:500px){body{background:#16352c}}</style><div>ScreenHop responsive test</div><button id="count" style="position:absolute;left:20px;top:100px;width:120px;height:40px" onclick="this.textContent=String(Number(this.textContent)+1)">0</button><input id="entry" style="position:absolute;left:20px;top:160px"><div style="height:3000px"></div>');
+    res.end('<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><title>ScreenHop test</title><style>body{margin:0;background:#131a25;color:white;font:24px sans-serif}div{padding:24px} @media(max-width:500px){body{background:#16352c}}</style><div>ScreenHop responsive test</div><button id="count" style="position:absolute;left:20px;top:100px;width:120px;height:40px" onclick="this.textContent=String(Number(this.textContent)+1)">0</button><a id="next" href="/linked" style="position:absolute;left:20px;top:220px">Next page</a><input id="entry" style="position:absolute;left:20px;top:160px"><div style="height:3000px"></div>');
   });
   await new Promise(r => server.listen(0,'127.0.0.1',r));
   const url = `http://127.0.0.1:${server.address().port}`;
@@ -65,7 +65,11 @@ test('independent device windows, persistent viewports, rotation and navigation'
     await evaluate(sourceSession,'scrollTo(0,1000)');
     await new Promise(r=>setTimeout(r,400));
     assert.ok(await evaluate(otherSession,'scrollY > 500'));
-    await cdp.send('Page.navigate',{url:url+'/linked'},sourceSession);
+    await evaluate(sourceSession,'scrollTo(0,0)');
+    await new Promise(r=>setTimeout(r,600));
+    const coordinateScale=process.env.SCREENHOP_TEST_NATIVE ? Math.min(1,780/844) : 1;
+    await cdp.send('Input.dispatchMouseEvent',{type:'mousePressed',x:60*coordinateScale,y:230*coordinateScale,button:'left',clickCount:1},sourceSession);
+    await cdp.send('Input.dispatchMouseEvent',{type:'mouseReleased',x:60*coordinateScale,y:230*coordinateScale,button:'left',clickCount:1},sourceSession);
     await new Promise(r=>setTimeout(r,700));
     assert.equal(await evaluate(otherSession,'location.pathname'),'/linked');
     await run('--link','off');
