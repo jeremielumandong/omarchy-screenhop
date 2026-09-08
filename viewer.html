@@ -97,13 +97,64 @@ function updateState(state) {
 }
 function status(state, message) { connected = state === 'live'; $('status').dataset.state = state; $('status-text').textContent = message; }
 function toast(message) { $('toast').textContent = message; $('toast').hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { $('toast').hidden = true; }, 4500); }
-async function post(route, data) {
- const response = await fetch(config.base + route, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+async function post(route, data, timeout = 5000) {
+ const response = await fetch(config.base + route, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data),signal:AbortSignal.timeout(timeout)});
  if (!response.ok) throw new Error(`Preview request failed (${response.status})`);
 }
-// Serialize input so fast clicks, typing, and modifier releases retain their order.
-let inputQueue = Promise.resolve();
-function input(data) { if (!connected) return; inputQueue = inputQueue.then(() => post('/input', data)).catch(error => toast(error.message)); }
+// One request in flight; combine only adjacent continuous gestures, never across clicks or keys.
+const inputQueue = [], remoteKeys = new Map(), remoteButtons = new Map();
+const maxPendingInputs = 128;
+let sendingInput = false, recoveringInput = false;
+function continuous(data) { return data.kind === 'wheel' || (data.kind === 'mouse' && data.type === 'mouseMoved'); }
+function rememberRemoteInput(data) {
+ if (data.kind === 'key') {
+  if (data.type === 'keyDown') remoteKeys.set(data.code,{key:data.key,code:data.code,keyCode:data.keyCode});
+  else if (data.type === 'keyUp') remoteKeys.delete(data.code);
+ } else if (data.kind === 'mouse') {
+  if (data.type === 'mousePressed') remoteButtons.set(data.button,{x:data.x,y:data.y});
+  else if (data.type === 'mouseReleased') remoteButtons.delete(data.button);
+  else if (data.type === 'mouseMoved') for (const button of remoteButtons.keys()) remoteButtons.set(button,{x:data.x,y:data.y});
+ }
+}
+function recoverInput(message) {
+ inputQueue.length = 0;
+ recoveringInput = true;
+ // Releases are safe even if the timed-out press never reached the target.
+ for (const key of remoteKeys.values()) inputQueue.push({data:{kind:'key',type:'keyUp',...key,modifiers:0},recovery:true});
+ for (const [button,point] of remoteButtons) inputQueue.push({data:{kind:'mouse',type:'mouseReleased',...point,button,buttons:0,clickCount:1,modifiers:0},recovery:true});
+ remoteKeys.clear(); remoteButtons.clear();
+ toast(message);
+}
+async function drainInput() {
+ if (sendingInput) return;
+ sendingInput = true;
+ try {
+  while (inputQueue.length) {
+   const item = inputQueue.shift();
+   rememberRemoteInput(item.data);
+   try { await post('/input',item.data,3000); }
+   catch {
+    if (item.recovery) { inputQueue.length = 0; break; }
+    recoverInput('Preview connection slowed down. Pending input cleared; please try again.');
+   }
+  }
+ } finally { sendingInput = false; recoveringInput = false; }
+}
+function input(data) {
+ if (!connected || recoveringInput) return;
+ const last = inputQueue.at(-1);
+ if (last && !last.recovery && continuous(data) && data.kind === last.data.kind && data.modifiers === last.data.modifiers && data.buttons === last.data.buttons) {
+  if (data.kind === 'wheel') last.data = {...data,deltaX:last.data.deltaX + data.deltaX,deltaY:last.data.deltaY + data.deltaY};
+  else if (last.data.type === 'mouseMoved') last.data = data;
+  else inputQueue.push({data});
+ } else inputQueue.push({data});
+ if (inputQueue.length > maxPendingInputs) {
+  const discard = inputQueue.findIndex(item => continuous(item.data));
+  if (discard >= 0) inputQueue.splice(discard,1);
+  else recoverInput('Preview input is arriving too quickly. Pending input cleared; please try again.');
+ }
+ void drainInput();
+}
 async function action(data) { try { await post('/action', data); } catch(error) { toast(error.message); } }
 document.querySelectorAll('[data-action]').forEach(button => button.addEventListener('click', () => action({action:button.dataset.action})));
 $('tools-toggle').addEventListener('click', () => { const opened = document.querySelector('.tool-dock').classList.toggle('open'); $('tools-toggle').setAttribute('aria-expanded',String(opened)); });

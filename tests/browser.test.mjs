@@ -66,6 +66,31 @@ test('independent device windows, persistent viewports, rotation and navigation'
     await cdp.send('Input.insertText',{text:'ScreenHop linked input'},sourceSession);
     await new Promise(r=>setTimeout(r,400));
     assert.equal(await evaluate(otherSession,'document.querySelector("#entry").value'),'ScreenHop linked input');
+    // Theme pickers commonly have text-only buttons, plus hidden responsive duplicates.
+    for (const session of [sourceSession,otherSession]) await evaluate(session, `(()=>{
+      for(const html of [
+        '<button type="button" style="position:fixed;left:20px;top:270px;width:140px;height:40px" onclick="document.body.dataset.theme=\\'Nord\\'">Nord</button>',
+        '<button type="button" style="display:none" onclick="document.body.dataset.theme=\\'wrong\\'">Nord</button>',
+        '<button type="button" aria-label="Change website theme" style="display:none">Theme</button>',
+        '<button type="button" aria-label="Change website theme" style="position:fixed;left:20px;top:320px;width:140px;height:40px" onclick="document.body.dataset.theme=\\'Light\\'">Theme</button>'
+      ]) document.body.insertAdjacentHTML('beforeend',html);
+    })()`);
+    const themeScale=process.env.SCREENHOP_TEST_NATIVE ? Math.min(1,780/844) : 1;
+    for (const [y,theme] of [[290,'Nord'],[340,'Light']]) {
+      await new Promise(r=>setTimeout(r,600));
+      await cdp.send('Input.dispatchMouseEvent',{type:'mousePressed',x:70*themeScale,y:y*themeScale,button:'left',clickCount:1},sourceSession);
+      await cdp.send('Input.dispatchMouseEvent',{type:'mouseReleased',x:70*themeScale,y:y*themeScale,button:'left',clickCount:1},sourceSession);
+      await new Promise(r=>setTimeout(r,400));
+      assert.equal(await evaluate(sourceSession,'document.body.dataset.theme'),theme);
+      assert.equal(await evaluate(otherSession,'document.body.dataset.theme'),theme,'semantic theme controls sync across responsive hidden duplicates');
+    }
+    await evaluate(otherSession, `[...document.querySelectorAll('button')].find(b=>b.textContent==='Nord' && !b.getClientRects().length).style.display='block'`);
+    await new Promise(r=>setTimeout(r,600));
+    await cdp.send('Input.dispatchMouseEvent',{type:'mousePressed',x:70*themeScale,y:290*themeScale,button:'left',clickCount:1},sourceSession);
+    await cdp.send('Input.dispatchMouseEvent',{type:'mouseReleased',x:70*themeScale,y:290*themeScale,button:'left',clickCount:1},sourceSession);
+    await new Promise(r=>setTimeout(r,400));
+    assert.equal(await evaluate(otherSession,'document.body.dataset.theme'),'Light','ambiguous visible controls must not replay');
+    console.log('Theme evidence: unnamed buttons and responsive duplicates synchronize; ambiguous visible controls are skipped.');
     await evaluate(sourceSession,'scrollTo(0,1000)');
     await new Promise(r=>setTimeout(r,400));
     assert.ok(await evaluate(otherSession,'scrollY > 500'));

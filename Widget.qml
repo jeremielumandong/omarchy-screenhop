@@ -27,6 +27,10 @@ BarWidget {
     property string phoneQrData: ""
     property string phoneReason: ""
     property bool phoneReplyReceived: false
+    property bool phoneFirewallPending: false
+    property bool firewallReplyReceived: false
+    property bool firewallRetry: true
+    property string firewallMessage: ""
     property bool linked: false
     property bool pendingLinked: false
     property bool launchReplyReceived: false
@@ -35,7 +39,7 @@ BarWidget {
     property string selectedId: ""
     property string status: "Choose a device to open a browser preview."
     property string launchError: ""
-    readonly property bool busy: launcher.running || linkUpdater.running || phoneUpdater.running
+    readonly property bool busy: launcher.running || linkUpdater.running || phoneUpdater.running || phoneFirewall.running
     readonly property string pluginDirectory: decodeURIComponent(Qt.resolvedUrl(".").toString().replace(/^file:\/\//, "")).replace(/\/?$/, "/")
     readonly property var groups: {
         var result = [];
@@ -105,12 +109,16 @@ BarWidget {
     function refreshPhone() {
         if (phoneUpdater.running) return;
         phoneReplyReceived = false;
+        phoneFirewallPending = false;
         phoneUpdater.command = ["node", pluginDirectory + "viewport.mjs", "--phone-status"];
         phoneUpdater.running = true;
     }
     function setPhone(value) {
         if (busy || (value && !deviceFrame)) return;
         phoneReason = "";
+        firewallMessage = "";
+        firewallRetry = true;
+        phoneFirewallPending = value;
         phoneReplyReceived = false;
         phoneUpdater.command = ["node", pluginDirectory + "viewport.mjs", "--phone", value ? "on" : "off"];
         phoneUpdater.running = true;
@@ -137,6 +145,37 @@ BarWidget {
         onExited: (exitCode, exitStatus) => {
             if ((exitCode !== 0 || !root.phoneReplyReceived) && !root.phoneReason)
                 root.phoneReason = "Could not update phone sharing.";
+            if (exitCode === 0 && root.phoneReplyReceived && root.phoneEnabled && root.phoneFirewallPending)
+                root.allowPhoneFirewall();
+            root.phoneFirewallPending = false;
+        }
+    }
+    function allowPhoneFirewall() {
+        if (!phoneEnabled || phoneFirewall.running) return;
+        firewallReplyReceived = false;
+        firewallMessage = "Checking Wi-Fi access. Enter your password in the system prompt if requested.";
+        phoneFirewall.command = ["node", pluginDirectory + "phone-firewall.mjs"];
+        phoneFirewall.running = true;
+    }
+    Process {
+        id: phoneFirewall
+        stdout: SplitParser {
+            onRead: data => {
+                try {
+                    var message = JSON.parse(data);
+                    if (typeof message.message === "string") {
+                        root.firewallReplyReceived = true;
+                        root.firewallMessage = message.message;
+                        root.firewallRetry = message.status !== "ready" && message.status !== "inactive";
+                    }
+                } catch (error) { /* Ignore diagnostic lines. */ }
+            }
+        }
+        onExited: (exitCode, exitStatus) => {
+            if (!root.firewallReplyReceived) {
+                root.firewallMessage = "Could not check Wi-Fi access. Use Allow Wi-Fi access to retry.";
+                root.firewallRetry = true;
+            }
         }
     }
     FileView {
@@ -326,7 +365,7 @@ BarWidget {
                 Label {
                     width: parent.width - phoneButton.width - parent.spacing
                     anchors.verticalCenter: parent.verticalCenter
-                    text: root.phoneReason || (root.deviceFrame ? "Use your phone on the same Wi-Fi." : "Phone remote requires Device frame.")
+                    text: root.firewallMessage || root.phoneReason || (root.deviceFrame ? "Use your phone on the same Wi-Fi." : "Phone remote requires Device frame.")
                     font.pixelSize: Style.font.bodySmall
                     opacity: 0.75
                 }
@@ -352,6 +391,14 @@ BarWidget {
                         width: parent.width
                         text: "Open this address on your phone, choose the lead preview, and enable linking to control the other previews."
                         font.pixelSize: Style.font.bodySmall
+                    }
+                    Button {
+                        visible: root.firewallRetry || phoneFirewall.running
+                        text: phoneFirewall.running ? "Waiting for authorization…" : "Allow Wi-Fi access"
+                        bordered: true
+                        focusable: true
+                        enabled: !root.busy
+                        onClicked: root.allowPhoneFirewall()
                     }
                     TextEdit {
                         width: parent.width

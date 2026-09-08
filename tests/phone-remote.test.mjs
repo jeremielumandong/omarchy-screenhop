@@ -1,13 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {request} from 'node:http';
+import {request,createServer} from 'node:http';
 import {PhoneRemote} from '../phone-remote.mjs';
 
 async function fixture(t){
   const calls=[];
   const record={id:'abc123',device:{name:'<script>alert(1)</script>',width:390,height:844},url:'https://example.test',linked:false,streams:new Set(),frame:'test-frame'};
   const host={token:'DESKTOP-SECRET',template:'<script>const config=__SCREENHOP_CONFIG__;</script>',records:new Map([[record.id,record]]),input:async(id,data)=>calls.push({id,data}),action:async(id,data)=>calls.push({id,data})};
-  const remote=await PhoneRemote.create({host,networkInterfaces:()=>({lo:[{family:'IPv4',address:'127.0.0.1',internal:true}]})});
+  const remote=await PhoneRemote.create({host,port:0,networkInterfaces:()=>({lo:[{family:'IPv4',address:'127.0.0.1',internal:true}]})});
   t.after(()=>remote.close());
   const url=remote.info().url;
   const post=(path,data,headers={})=>fetch(url+'view/abc123/'+path,{method:'POST',headers:{'Content-Type':'application/json',...headers},body:JSON.stringify(data)});
@@ -55,8 +55,20 @@ test('frames stream and disable cleans subscriptions and revokes pairing',async 
 
  test('pairing prioritizes Wi-Fi then Ethernet ahead of virtual interfaces',async t=>{
   const ip=address=>[{address,family:'IPv4',internal:false}];
-  const remote=await PhoneRemote.create({host:{records:new Map()},networkInterfaces:()=>({docker0:ip('172.17.0.1'),wg0:ip('10.10.0.1'),eth0:ip('192.168.1.4'),wlp2s0:ip('192.168.1.5')})});
+  const remote=await PhoneRemote.create({host:{records:new Map()},port:0,networkInterfaces:()=>({docker0:ip('172.17.0.1'),wg0:ip('10.10.0.1'),eth0:ip('192.168.1.4'),wlp2s0:ip('192.168.1.5')})});
   t.after(()=>remote.close());
   assert.deepEqual(remote.info().urls.map(value=>new URL(value).hostname),['192.168.1.5','192.168.1.4','172.17.0.1','10.10.0.1']);
   assert.equal(new URL(remote.info().url).hostname,'192.168.1.5');
+});
+
+test('configured port is used and an occupied port reports a useful error',async t=>{
+  const reserved=createServer();
+  await new Promise(resolve=>reserved.listen(0,'0.0.0.0',resolve));
+  const port=reserved.address().port;
+  await assert.rejects(PhoneRemote.create({host:{records:new Map()},port}),new RegExp(`port ${port} is already in use`));
+  await new Promise(resolve=>reserved.close(resolve));
+  const remote=await PhoneRemote.create({host:{records:new Map()},port,networkInterfaces:()=>({wlan0:[{address:'192.168.1.2',family:'IPv4',internal:false}]})});
+  t.after(()=>remote.close());
+  assert.equal(remote.info().port,port);
+  assert.match(remote.info().reason,new RegExp(`TCP port ${port}`));
 });

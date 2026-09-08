@@ -15,3 +15,7 @@ Local development version; not published.
 - Fixed linked-state reporting, SPA navigation from buttons/rows, and authentication pause recovery after same-document callback cleanup.
 - Added opt-in phone remote with QR pairing, touch/keyboard control, and immediate disconnect.
 - Added device categories, custom viewport sizes, and original decorative device skins.
+
+- Fixed phone connectivity with dedicated TCP53318 and scoped UFW setup through the system password prompt.
+- Paced frame capture and reduced image traffic without changing page viewport metrics. Bounded input queues coalesce movement and recover from stalled requests.
+- Fixed unnamed theme buttons and hidden duplicate controls, verified against omarchy.org.

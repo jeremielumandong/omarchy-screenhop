@@ -54,18 +54,25 @@ function canSyncNavigation(sourcePreviousUrl, nextUrl) {
   addEventListener('hashchange',detectAuthPage);
   addEventListener('popstate',detectAuthPage);
 
+  const visible = element => element.getClientRects().length > 0 && getComputedStyle(element).visibility !== 'hidden';
+  const label = element => (element.textContent || '').replace(/\s+/g, ' ').trim();
+  const candidates = (selector, text) => [...document.querySelectorAll(selector)].filter(element => visible(element) && (text === undefined || label(element) === text));
   const key = element => {
     if (!(element instanceof Element)) return null;
-    for (const attr of ['data-testid','id','name','aria-label']) {
+    // Responsive pages may contain both mobile and desktop controls. Match the
+    // single visible control rather than rejecting a hidden duplicate.
+    for (const attr of ['data-testid','aria-label','name','title','id']) {
       const value = element.getAttribute(attr);
-      if (value) {
-        const selector = element.tagName.toLowerCase() + '[' + attr + '=' + JSON.stringify(value) + ']';
-        if (document.querySelectorAll(selector).length === 1) return selector;
+      if (value && value.length <= 512) {
+        const selector = element.tagName.toLowerCase() + '[' + attr + '="' + CSS.escape(value) + '"]';
+        if (candidates(selector).length === 1) return {selector};
       }
     }
-    if (element.matches('a[href]')) {
-      const selector = 'a[href=' + JSON.stringify(element.getAttribute('href')) + ']';
-      if (document.querySelectorAll(selector).length === 1) return selector;
+    if (element.matches('button,[role="button"],[role="tab"],[role="menuitem"]')) {
+      const text = label(element);
+      const role = element.getAttribute('role');
+      const selector = role ? '[role="' + CSS.escape(role) + '"]' : 'button';
+      if (text && text.length <= 200 && candidates(selector, text).length === 1) return {selector, text};
     }
     return null;
   };
@@ -75,7 +82,7 @@ function canSyncNavigation(sourcePreviousUrl, nextUrl) {
   document.addEventListener('click', event => {
     detectAuthPage();
     if (!(event.target instanceof Element) || !event.isTrusted || authPaused) return;
-    const element = event.target.closest('button,a,input,select,textarea,[role="button"]') || event.target;
+    const element = event.target.closest('button,a,input,select,textarea,[role="button"],[role="tab"],[role="menuitem"]') || event.target;
     if (authAction(element)) { pauseAuth('Authentication action'); return; }
     if (submitAction(element) || element.matches('input[type="password"],input[type="file"]')) return;
     if (event.button === 0 && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) send(event,{kind:'gesture'});
@@ -85,7 +92,7 @@ function canSyncNavigation(sourcePreviousUrl, nextUrl) {
       return;
     }
     const selector = key(element);
-    if (selector) send(event, {kind:'click',selector});
+    if (selector) send(event, {kind:'click',...selector});
   }, true);
   document.addEventListener('submit', event => {
     if (event.isTrusted && (event.target.querySelector(authFields) || authText.test(event.target.action || ''))) pauseAuth('Login form submission');
@@ -96,7 +103,7 @@ function canSyncNavigation(sourcePreviousUrl, nextUrl) {
     if (event.isTrusted && authAction(element)) { pauseAuth('Authentication input'); return; }
     if (!element.matches('input,textarea,select') || element.matches('[type="password"],[type="file"],[type="hidden"]')) return;
     const selector = key(element);
-    if (selector) send(event, {kind:'input',selector,value:element.value,checked:element.checked});
+    if (selector) send(event, {kind:'input',...selector,value:element.value,checked:element.checked});
   }, true);
   let scrollTimer;
   document.addEventListener('scroll', event => {
@@ -112,8 +119,12 @@ function canSyncNavigation(sourcePreviousUrl, nextUrl) {
       scrollTo(data.x * Math.max(0,document.documentElement.scrollWidth-innerWidth),data.y * Math.max(0,document.documentElement.scrollHeight-innerHeight));
       return true;
     }
-    const element = document.querySelector(data.selector);
-    if (!element || !element.getClientRects().length || element.disabled) return false;
+    if (typeof data.selector !== 'string') return false;
+    let matches;
+    try { matches = candidates(data.selector, data.text); } catch { return false; }
+    if (matches.length !== 1) return false;
+    const element = matches[0];
+    if (element.disabled) return false;
     if (authAction(element) || submitAction(element) || element.matches('a[href]')) return false;
     if (data.kind === 'click') { element.click(); return true; }
     if (data.kind === 'input' && element.matches('input,textarea,select') && !element.matches('[type="password"],[type="file"],[type="hidden"]')) {

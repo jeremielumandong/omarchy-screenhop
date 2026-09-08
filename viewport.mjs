@@ -98,6 +98,8 @@ async function serve(state, headless) {
   let cdp, viewerCdp, host, phoneRemote, lastUsed = Date.now();
   const viewerTargets = new Map();
   const sessions = new Map();
+  const frameDeadlines = new Map();
+  const frameTimers = new Set();
   const contexts = new Map();
   const muted = new Map();
   let linked = false;
@@ -106,7 +108,13 @@ async function serve(state, headless) {
   function onEvent(event) {
     if (event.method === 'Page.screencastFrame') {
       host?.frame(event.sessionId,event.params.data);
-      cdp.send('Page.screencastFrameAck',{sessionId:event.params.sessionId},event.sessionId).catch(()=>{});return;
+      // Pace capture at its source, preserving viewport/DPR while limiting work
+      // to 20 fps per preview and about 60 fps across the group.
+      const now=Date.now(),interval=Math.max(50,sessions.size*1000/60);
+      const due=Math.max(now,frameDeadlines.get(event.sessionId)||now);
+      frameDeadlines.set(event.sessionId,due+interval);
+      const timer=setTimeout(()=>{frameTimers.delete(timer);cdp.send('Page.screencastFrameAck',{sessionId:event.params.sessionId},event.sessionId).catch(()=>{});},due-now);
+      frameTimers.add(timer);return;
     }
     if ((event.method==='Page.frameNavigated'&&!event.params.frame.parentId)||event.method==='Page.navigatedWithinDocument') {
       const id=[...sessions].find(([,sid])=>sid===event.sessionId)?.[0];
@@ -169,7 +177,7 @@ async function serve(state, headless) {
     host.setLinked(linked,linker.reason);
     for (let attempt=0; ; attempt++) {
       try {
-        await cdp.send('Page.startScreencast',{format:'jpeg',quality:90,maxWidth:device.width,maxHeight:device.height},sessionId);
+        await cdp.send('Page.startScreencast',{format:'jpeg',quality:75,maxWidth:Math.round(device.width*Math.min(1,1280/Math.max(device.width,device.height))),maxHeight:Math.round(device.height*Math.min(1,1280/Math.max(device.width,device.height)))},sessionId);
         break;
       } catch(error) { if(attempt>=20)throw error; await delay(50); }
     }
@@ -278,7 +286,7 @@ async function serve(state, headless) {
               if(!phoneRemote){const {PhoneRemote}=await import('./phone-remote.mjs');phoneRemote=await PhoneRemote.create({host});}
             }else throw new Error('Use --phone on or --phone off.');
           }
-          const result = (request.phone!==undefined||request['phone-status']) ? {status:'phone',...(phoneRemote?phoneRemote.info():{enabled:false,url:'',urls:[],qrData:''})} : request.status ? {status:'state',enabled:linked,reason:linker.reason,previewCount:sessions.size} : request.link !== undefined ? {status:'linked', enabled:linked, reason:linker.reason} : request.ping ? {status:'ok',protocol:2} : request.close ? await closePreview() : request.inspect ? await inspectPreview(request.targetId) : await preview(request);
+          const result = (request.phone!==undefined||request['phone-status']) ? {status:'phone',...(phoneRemote?phoneRemote.info():{enabled:false,url:'',urls:[],qrData:''})} : request.status ? {status:'state',enabled:linked,reason:linker.reason,previewCount:sessions.size} : request.link !== undefined ? {status:'linked', enabled:linked, reason:linker.reason} : request.ping ? {status:'ok',protocol:3} : request.close ? await closePreview() : request.inspect ? await inspectPreview(request.targetId) : await preview(request);
           client.end(JSON.stringify(result) + '\n');
         } catch (error) { client.end(JSON.stringify({status:'error', error:error.message}) + '\n'); }
       });
@@ -294,6 +302,7 @@ async function serve(state, headless) {
   }
   async function closePreview() {
     viewerTargets.clear();
+    for(const timer of frameTimers)clearTimeout(timer);frameTimers.clear();frameDeadlines.clear();
     if (viewerCdp?.ws.readyState === WebSocket.OPEN) await viewerCdp.send('Browser.close').catch(()=>{});
     if (cdp?.ws.readyState === WebSocket.OPEN) await cdp.send('Browser.close').catch(() => {});
     return {status:'closed'};
@@ -302,7 +311,7 @@ async function serve(state, headless) {
   await chmod(socket, 0o600);
   const idle = setInterval(() => {
     if ((!cdp || cdp.ws.readyState !== WebSocket.OPEN) && Date.now() - lastUsed > 30000) {
-      clearInterval(idle); phoneRemote?.close(); host?.shutdown(); server.close(); unlink(socket).catch(() => {});
+      clearInterval(idle); for(const timer of frameTimers)clearTimeout(timer); phoneRemote?.close(); host?.shutdown(); server.close(); unlink(socket).catch(() => {});
     }
   }, 5000);
 }
@@ -335,7 +344,7 @@ async function main() {
   const socket = join(state, 'controller.sock'); let response;
   try {
     const running=await rpc(socket,{ping:true});
-    if(running.protocol!==2&&!opts.close)throw new Error('ScreenHop was updated. Save your work, close all ScreenHop previews, wait 35 seconds, then reopen them to activate the update.');
+    if(running.protocol!==3&&!opts.close)throw new Error('ScreenHop was updated. Save your work, close all ScreenHop previews, wait 35 seconds, then reopen them to activate the update.');
     response = await rpc(socket, opts);
   } catch (error) {
     if (!['ENOENT','ECONNREFUSED'].includes(error.code)) throw error;

@@ -10,7 +10,7 @@ ScreenHop is an Omarchy shell plugin with 66 searchable presets across 10 catego
 
 ## Device previews
 
-Click **ScreenHop** in the bar, enter your website URL (including localhost), and choose a device. The selected device's name and resolution appear above a centered outline. Framed previews use borderless app windows with no browser tabs, address bar, or persistent toolbar; controls appear from the small menu button on hover or keyboard focus. Phone, tablet and desktop frames surround the live webpage without covering it or changing its viewport. Large devices scale visually to fit.
+Click **ScreenHop** in the bar, enter your website URL (including localhost), and choose a device. The selected device's name and resolution appear above a centered outline. Framed previews use borderless app windows with no browser tabs, address bar, or persistent toolbar; controls appear from the small menu button on hover or keyboard focus. Phone, tablet and desktop frames surround the live webpage without covering it or changing its viewport. Large devices scale visually to fit. Preview streaming uses JPEG quality 75, a maximum 1280-pixel long edge, and capture pacing of up to 20 frames per second per preview (about 60 across the group). These display optimizations preserve the tested CSS viewport and pixel density.
 
 - **Device frame on:** a live offscreen Chromium renderer appears inside a centered device frame. Mouse, keyboard, paste and scrolling are forwarded to the actual page. Use the viewer's Frame toggle to hide the decorative outline without changing viewport dimensions.
 - **Device frame off in the picker:** opens a direct Chromium window with the device and resolution in its title. This retains native browser controls and is preferable for sign-in troubleshooting or features the streamed viewer does not support.
@@ -34,7 +34,7 @@ Regression coverage includes IdentityServer, Okta, Azure AD/Microsoft Entra ID, 
 
 Cloudflare can still challenge or reject emulated/automated browsers. ScreenHop does not bypass those checks. Cloudflare documents that headless browsers and automation are unsupported for production challenge solving: [supported browsers](https://developers.cloudflare.com/cloudflare-challenges/reference/supported-browsers/). Direct mode removes the streamed/headless view but still uses viewport emulation and is not a guarantee of challenge compatibility.
 
-Clicks match unique data-testid, id, name, aria-label or link href and skip missing/hidden elements. Embedded frames, shadow DOM and arbitrary custom controls are not synchronized. Linked actions run in each preview; use test data for actions that change application state.
+Clicks match visible unique data-testid, aria-label, id, name, link href or semantic button text, and skip missing, hidden or ambiguous controls. Embedded frames, shadow DOM and arbitrary custom controls are not synchronized. Linked actions run in each preview; use test data for actions that change application state.
 
 ## Phone remote
 
@@ -42,7 +42,7 @@ Open framed previews, then choose **Phone remote** in the ScreenHop picker. Scan
 
 Tap to click and swipe to scroll. For typing, tap the field inside the preview, open **Keyboard**, and type using the phone keyboard helper. Authentication still pauses linking; your phone controls the selected desktop renderer without importing a phone login session.
 
-**Stop sharing** disconnects phones and revokes the pairing URL. Sharing defaults off. The pairing URL grants control over these previews: use a trusted local network, since the connection uses local HTTP. Both devices must be reachable on the same network; guest Wi-Fi isolation or a firewall may block access. `qrencode` is optional; a copyable URL is always available.
+**Stop sharing** closes the listener, disconnects phones and revokes the pairing URL. ScreenHop uses TCP port **53318**. When UFW needs a rule, enabling Phone remote invokes the system password prompt to allow only the active local subnet/interface. ScreenHop never reads or stores the password. The scoped firewall rule remains for later sessions; no service listens while sharing is off. Sharing defaults off. The pairing URL grants control over these previews: use a trusted local network, since the connection uses local HTTP. Both devices must be reachable on the same network; guest Wi-Fi isolation or a firewall may block access. `qrencode` is optional; a copyable URL is always available.
 
 ## Requirements and local installation
 

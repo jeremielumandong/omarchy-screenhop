@@ -9,7 +9,8 @@ const escapeHTML=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;'
 // An explicitly enabled, revocable LAN controller. It only exposes the framed
 // preview API; the desktop control token and browser debugging port stay private.
 export class PhoneRemote {
-  static async create({host,networkInterfaces=systemInterfaces}) {
+  static async create({host,networkInterfaces=systemInterfaces,port=53318}) {
+    if(!Number.isInteger(port)||port<0||port>65535)throw new Error('Phone remote port must be between 0 and 65535.');
     const remote=new PhoneRemote();
     remote.host=host; remote.token=randomBytes(32).toString('hex');
     remote.sockets=new Set(); remote.streams=new Map(); remote.enabled=true;
@@ -24,8 +25,19 @@ export class PhoneRemote {
     }));
     remote.server.on('connection',socket=>{remote.sockets.add(socket);socket.on('close',()=>remote.sockets.delete(socket));});
     remote.server.requestTimeout=15000; remote.server.headersTimeout=10000;
-    await new Promise((resolve,reject)=>{remote.server.once('error',reject);remote.server.listen(0,'0.0.0.0',resolve);});
+    try {
+      await new Promise((resolve,reject)=>{
+        const failed=error=>reject(error);remote.server.once('error',failed);
+        remote.server.listen(port,'0.0.0.0',()=>{remote.server.removeListener('error',failed);resolve();});
+      });
+    } catch(error) {
+      remote.enabled=false;remote.token='';remote.server.close();
+      for(const socket of remote.sockets)socket.destroy();
+      if(error.code==='EADDRINUSE')throw new Error(`ScreenHop phone remote port ${port} is already in use. Close the other ScreenHop remote or the app using that port, then try again.`);
+      throw error;
+    }
     remote.port=remote.server.address().port;
+    remote.reason=addresses.length?`Use the same Wi-Fi network. If a firewall is enabled, allow TCP port ${remote.port} from your local network.`:'No LAN IPv4 address is available. Connect this computer to Wi-Fi or Ethernet, then turn Phone remote off and on.';
     remote.urls=(addresses.length?addresses:['127.0.0.1']).map(address=>`http://${address}:${remote.port}/${remote.token}/`);
     remote.qrData='';
     try {
@@ -34,7 +46,7 @@ export class PhoneRemote {
     } catch { /* The copyable pairing URL remains available without qrencode. */ }
     return remote;
   }
-  info() {return this.enabled?{enabled:true,urls:[...this.urls],url:this.urls[0],qrData:this.qrData,port:this.port}:{enabled:false,urls:[],url:'',qrData:''};}
+  info() {return this.enabled?{enabled:true,urls:[...this.urls],url:this.urls[0],qrData:this.qrData,port:this.port,reason:this.reason}:{enabled:false,urls:[],url:'',qrData:''};}
   async close() {
     this.enabled=false;this.token='';this.urls=[];this.qrData='';
     for(const [stream,cleanup] of this.streams){cleanup();stream.destroy();}
