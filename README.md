@@ -10,7 +10,7 @@ ScreenHop is an Omarchy shell plugin with 16 searchable phone, tablet, and compu
 
 ## Device previews
 
-Click **ScreenHop** in the bar, enter your website URL (including localhost), and choose a device. The selected device's name and resolution appear above a centered outline. Phone, tablet and desktop frames surround the live webpage without covering it or changing its viewport. Large devices scale visually to fit.
+Click **ScreenHop** in the bar, enter your website URL (including localhost), and choose a device. The selected device's name and resolution appear above a centered outline. Framed previews use borderless app windows with no browser tabs, address bar, or persistent toolbar; controls appear from the small menu button on hover or keyboard focus. Phone, tablet and desktop frames surround the live webpage without covering it or changing its viewport. Large devices scale visually to fit.
 
 - **Device frame on:** a live offscreen Chromium renderer appears inside a centered device frame. Mouse, keyboard, paste and scrolling are forwarded to the actual page. Use the viewer's Frame toggle to hide the decorative outline without changing viewport dimensions.
 - **Device frame off in the picker:** opens a direct Chromium window with the device and resolution in its title. This retains native browser controls and is preferable for sign-in troubleshooting or features the streamed viewer does not support.
@@ -44,7 +44,7 @@ No npm dependencies or browser extension are needed.
 bash scripts/install.sh
 ```
 
-The widget appears at the right of the bar. After updating, open new previews to use the new controller. Previously opened previews remain in their existing session; the older linked session was disabled during the OAuth fix.
+The widget appears at the right of the bar. The installer keeps backups outside Omarchy’s plugin discovery directory and migrates older timestamped backup folders so they cannot override the current plugin. After updating, open new previews to use the new controller. Previously opened previews remain in their existing session; the older linked session was disabled during the OAuth fix.
 
 To remove the widget from the bar: `omarchy plugin disable arkane.screenhop`.
 
@@ -69,6 +69,7 @@ node viewport.mjs --list
 node --test tests/auth-policy.test.mjs tests/browser.test.mjs tests/viewer.test.mjs
 SCREENHOP_TEST_NATIVE=1 node --test tests/browser.test.mjs
 bash tests/ui-smoke.sh
+bash tests/install-smoke.sh
 ```
 
 Browser tests require local browser/socket access. The QML test requires a Wayland session. See [VALIDATION.md](VALIDATION.md) for results.

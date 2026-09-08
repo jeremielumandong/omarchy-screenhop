@@ -33,8 +33,13 @@ test('centered live device frame, input forwarding, authentication isolation and
   await eventually(()=>evalView('document.querySelector("#display")?.naturalWidth > 0'),'live page image');
   assert.match(await evalView('document.title'),/iPhone 13/);
   assert.match(await evalView('document.querySelector("#dimensions").textContent'),/390 × 844/);
-  const geometry=await evalView('(()=>{const d=document.querySelector("#device").getBoundingClientRect(),s=document.querySelector("#stage").getBoundingClientRect();return{center:d.x+d.width/2,stage:s.x+s.width/2}})()');
+  const geometry=await evalView('(()=>{const d=document.querySelector("#device").getBoundingClientRect(),s=document.querySelector("#stage").getBoundingClientRect();return{center:d.x+d.width/2,stage:s.x+s.width/2,centerY:d.y+d.height/2,stageY:s.y+s.height/2}})()');
   assert.ok(Math.abs(geometry.center-geometry.stage)<2,'device frame is horizontally centered');
+  assert.ok(Math.abs(geometry.centerY-geometry.stageY)<2,'device frame is vertically centered');
+  if(process.env.SCREENHOP_TEST_HEADFUL){
+   const chrome=await evalView('({outer:outerHeight,inner:innerHeight})');
+   assert.ok(chrome.outer-chrome.inner<=2,'No browser titlebar, tabs or address bar: '+JSON.stringify(chrome));
+  }
   async function clickView(x,y){await viewer.send('Input.dispatchMouseEvent',{type:'mousePressed',x,y,button:'left',clickCount:1},view);await viewer.send('Input.dispatchMouseEvent',{type:'mouseReleased',x,y,button:'left',clickCount:1},view)}
   const button=await evalSource('(()=>{const r=document.querySelector("#counter").getBoundingClientRect();return{x:r.x+r.width/2,y:r.y+r.height/2}})()');
   const screen=await evalView('(()=>{const r=document.querySelector("#screen").getBoundingClientRect();return{x:r.x,y:r.y,w:r.width,h:r.height}})()');

@@ -8,3 +8,6 @@ Local development version; not published.
 - Optional linked clicks, ordinary input, scrolling and same-origin link navigation.
 - Linking defaults off. OAuth/OIDC, provider login, credential/MFA forms and security challenges pause synchronization. Redirect chains and authentication callbacks are never replayed as navigation commands.
 - Local browser/Omarchy tests and saved-login-profile plan.
+
+- Fixed installer backups shadowing the live plugin with version 0.1.0. Backups now live outside plugin discovery.
+- Framed previews are borderless app windows, centered horizontally and vertically, with hover/focus tools.

@@ -13,3 +13,6 @@ Validated locally on Omarchy / Hyprland, 2026-09-08. Not published.
 The provider tests use local fixtures and synthetic callback values. No live tenant sign-in, production Cloudflare challenge solve, or universal provider compatibility is claimed. Keep linking off during authentication; Cloudflare can still reject automated/emulated browsers.
 
 Screenshot `preview.png` was captured from the actual framed viewer displaying a local test page. Named login profiles/session import remain planned in PLAN.md.
+
+- Borderless desktop regression passed: application viewport height equals outer window height (no browser titlebar/tabs/address bar), and the device outline is centered on both axes.
+- Installer regression passed: legacy backup migration and repeat installs preserve all backups outside discovery and leave exactly one discoverable ScreenHop 1.0.0.

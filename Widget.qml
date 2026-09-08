@@ -8,6 +8,7 @@ import qs.Ui
 BarWidget {
     id: root
     moduleName: "arkane.screenhop"
+    Component.onCompleted: console.info("ScreenHop 1.0.0 widget loaded:", pluginDirectory)
     property bool opened: false
     property bool popoutSwitchClosing: false
     property var devices: []

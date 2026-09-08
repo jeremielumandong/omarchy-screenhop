@@ -166,7 +166,20 @@ async function serve(state, headless) {
         break;
       } catch(error) { if(attempt>=20)throw error; await delay(50); }
     }
-    const {targetId:viewerTargetId} = await viewerCdp.send('Target.createTarget',{url:viewerUrl,newWindow:true});
+    let viewerTargetId;
+    if (headless) {
+      viewerTargetId=(await viewerCdp.send('Target.createTarget',{url:viewerUrl,newWindow:true})).targetId;
+    } else {
+      // Application windows omit Chromium's tabs and address bar.
+      const child=spawn(browserExecutable(),['--user-data-dir='+join(state,'viewer-browser'),'--app='+viewerUrl,'--class=screenhop'],{detached:true,stdio:'ignore'});
+      let failure;child.on('error',error=>{failure=error});child.unref();
+      for(let attempt=0;attempt<100&&!viewerTargetId;attempt++) {
+        if(failure)throw failure;
+        viewerTargetId=(await viewerCdp.send('Target.getTargets')).targetInfos.find(t=>t.type==='page'&&t.url===viewerUrl)?.targetId;
+        if(!viewerTargetId)await delay(50);
+      }
+      if(!viewerTargetId)throw new Error('The device window could not open.');
+    }
     viewerTargets.set(viewerTargetId,targetId);
     const {sessionId:viewerSession} = await viewerCdp.send('Target.attachToTarget',{targetId:viewerTargetId,flatten:true});
     await viewerCdp.send('Page.bringToFront',{},viewerSession);
@@ -186,7 +199,12 @@ async function serve(state, headless) {
     const height=device.width>device.height?780:940;
     const {windowId}=await viewerCdp.send('Browser.getWindowForTarget',{targetId:viewerTargetId});
     await viewerCdp.send('Browser.setWindowBounds',{windowId,bounds:{width,height,windowState:'normal'}});
-    if(previewAddress)execFileSync('hyprctl',['dispatch','hl.dsp.window.resize({window="address:'+previewAddress+'",x='+width+',y='+height+',relative=false})'],{stdio:'pipe',timeout:2000});
+    if(previewAddress) {
+      execFileSync('hyprctl',['dispatch','hl.dsp.window.resize({window="address:'+previewAddress+'",x='+width+',y='+height+',relative=false})'],{stdio:'pipe',timeout:2000});
+      execFileSync('hyprctl',['setprop','address:'+previewAddress,'no_border','1'],{stdio:'pipe',timeout:2000});
+      // Hide application chrome without making the desktop window occupy a monitor.
+      execFileSync('hyprctl',['dispatch','hl.dsp.window.fullscreen_state({window="address:'+previewAddress+'",internal=0,client=2,action="set"})'],{stdio:'pipe',timeout:2000});
+    }
     muted.set(sessionId, Date.now() + 500);
     return {status:'ready', linked, reason:linker.reason, targetId, viewerTargetId, viewerUrl, device:device.name, width:device.width, height:device.height, url:device.url};
   }
