@@ -36,6 +36,7 @@ body{display:block}.stage{width:100%;height:100%;padding:68px 24px;background:ra
 .android.landscape{width:calc(var(--w)*1px + var(--bezel)*2 + 54px)}.android.landscape .hardware-top{width:34px}.android.landscape .hardware-bottom{width:20px}.android.landscape .camera{width:13px;height:13px;left:10px}.android.landscape .camera::after{top:4px;right:4px}.android.landscape .hardware-bottom::before{width:3px;height:85px}
 .tablet.landscape{width:calc(var(--w)*1px + var(--bezel)*2 + 30px)}.tablet.landscape .hardware-top,.tablet.landscape .hardware-bottom{width:15px}.tablet.landscape .camera{left:1px;width:7px;height:7px}.tablet.landscape .camera::after{top:2px;right:2px}.tablet.landscape .hardware-bottom::before{width:3px;height:100px}.skin-foldable.landscape{width:calc(var(--w)*1px + var(--bezel)*2 + 42px)}.skin-foldable.landscape .hardware-top{width:23px}.skin-foldable.landscape .hardware-bottom{width:19px}.skin-foldable.landscape .camera{left:7px}
 .device.bare{display:block;width:calc(var(--w)*1px);padding:0;--stand-height:0px}.device.bare .hardware-top,.device.bare .hardware-bottom,.device.bare::before,.device.bare::after{display:none}
+.rtc-video{display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:fill;pointer-events:none}.screen.rtc-live .rtc-video{display:block}.screen.rtc-live #display{visibility:hidden}
 </style>
 </head>
 <body>
@@ -44,7 +45,7 @@ body{display:block}.stage{width:100%;height:100%;padding:68px 24px;background:ra
  <button id="tools-toggle" class="tools-toggle" aria-expanded="false" aria-controls="floating-tools" aria-label="Show preview controls" title="Preview controls"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>
  <div id="floating-tools" class="floating-tools"><nav class="navigation" aria-label="Preview navigation"><button class="icon-button" data-action="back" aria-label="Back" title="Back"><svg viewBox="0 0 24 24"><path d="m13 6-6 6 6 6M7 12h12"/></svg></button><button class="icon-button" data-action="forward" aria-label="Forward" title="Forward"><svg viewBox="0 0 24 24"><path d="m11 6 6 6-6 6M5 12h12"/></svg></button><button class="icon-button" data-action="reload" aria-label="Reload preview" title="Reload preview"><svg viewBox="0 0 24 24"><path d="M20 10a8 8 0 1 0-2 8M20 4v6h-6"/></svg></button><div class="url" id="url"></div><div id="status" class="status" role="status" data-state="connecting"><span class="dot"></span><span id="status-text">Connecting</span></div></nav><div class="controls"><button id="link" class="pill" aria-pressed="false" title="Synchronize clicks, typing, navigation, and scrolling between previews" aria-label="Link previews"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10 13 4-4m-6 7-1 1a4 4 0 0 1-6-6l4-4a4 4 0 0 1 6 0m2 2 1-1a4 4 0 0 1 6 6l-4 4a4 4 0 0 1-6 0" transform="translate(1 0)"/></svg><span class="button-label">Link previews</span></button><button id="frame" class="pill" aria-pressed="true" title="Show device frame" aria-label="Show device frame"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M10 5h4m-3 14h2"/></svg><span class="button-label">Frame</span></button></div></div>
 </aside>
-<main class="stage" id="stage"><div class="preview-group"><div class="preview-label"><strong id="preview-name"></strong><span id="preview-size"></span></div><div class="fit-box" id="fit-box"><div class="device" id="device"><div class="hardware-top" aria-hidden="true"><span class="clock">9:41</span><span class="camera"></span><span class="system-icons"><svg viewBox="0 0 20 20"><path d="M2 15v-2m4 2v-5m4 5V7m4 8V4"/></svg><svg viewBox="0 0 20 20"><path d="M2 7a12 12 0 0 1 16 0M5 10a8 8 0 0 1 10 0m-7 3a3 3 0 0 1 4 0m-2 3h.01"/></svg><svg viewBox="0 0 22 20"><rect x="1" y="5" width="16" height="10" rx="2"/><path d="M20 8v4M4 8h10v4H4z"/></svg></span></div><div class="screen" id="screen" tabindex="0" role="application" aria-label="Interactive device preview. Click to focus; keyboard and pointer input control the website."><img id="display" alt="Live website preview" draggable="false"><div class="loading" id="loading">Connecting to your preview…</div></div><div class="hardware-bottom" aria-hidden="true"></div></div></div></div><div class="toast" id="toast" role="alert" hidden></div></main>
+<main class="stage" id="stage"><div class="preview-group"><div class="preview-label"><strong id="preview-name"></strong><span id="preview-size"></span></div><div class="fit-box" id="fit-box"><div class="device" id="device"><div class="hardware-top" aria-hidden="true"><span class="clock">9:41</span><span class="camera"></span><span class="system-icons"><svg viewBox="0 0 20 20"><path d="M2 15v-2m4 2v-5m4 5V7m4 8V4"/></svg><svg viewBox="0 0 20 20"><path d="M2 7a12 12 0 0 1 16 0M5 10a8 8 0 0 1 10 0m-7 3a3 3 0 0 1 4 0m-2 3h.01"/></svg><svg viewBox="0 0 22 20"><rect x="1" y="5" width="16" height="10" rx="2"/><path d="M20 8v4M4 8h10v4H4z"/></svg></span></div><div class="screen" id="screen" tabindex="0" role="application" aria-label="Interactive device preview. Click to focus; keyboard and pointer input control the website."><img id="display" alt="Live website preview" draggable="false"><video id="rtc-video" class="rtc-video" autoplay muted playsinline aria-label="Live website video"></video><div class="loading" id="loading">Connecting to your preview…</div></div><div class="hardware-bottom" aria-hidden="true"></div></div></div></div><div class="toast" id="toast" role="alert" hidden></div></main>
 <footer class="footer"><span id="footer-device"></span><span class="separator">·</span><span id="scale"></span><span class="separator">·</span><span>ScreenHop 1.0.0</span></footer>
 <section class="phone-keyboard" aria-label="Phone keyboard controls">
  <button id="phone-keyboard-toggle" class="phone-keyboard-toggle" aria-expanded="false" aria-controls="phone-keyboard-panel">Keyboard</button>
@@ -98,7 +99,7 @@ function updateState(state) {
 function status(state, message) { connected = state === 'live'; $('status').dataset.state = state; $('status-text').textContent = message; }
 function toast(message) { $('toast').textContent = message; $('toast').hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { $('toast').hidden = true; }, 4500); }
 async function post(route, data, timeout = 5000) {
- const response = await fetch(config.base + route, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data),signal:AbortSignal.timeout(timeout)});
+ const response = await fetch(config.base + route, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data),keepalive:route === '/signal' && data.type === 'close',signal:AbortSignal.timeout(timeout)});
  if (!response.ok) throw new Error(`Preview request failed (${response.status})`);
 }
 // One request in flight; combine only adjacent continuous gestures, never across clicks or keys.
@@ -252,12 +253,95 @@ if (phone) {
  window.addEventListener('pagehide', () => { keyboard.value = ''; });
  clearKeyboard();
 }
+// Native tab video is negotiated over the authenticated local signaling endpoint.
+const rtcVideo = $('rtc-video');
+let rtcPeer = null, rtcPeerId = null, rtcMode = 'jpeg', rtcGeneration = 0, rtcTimer = null;
+let rtcSignalQueue = Promise.resolve(), rtcRemoteQueue = Promise.resolve(), rtcCandidates = [];
+function sendRTC(message, generation = rtcGeneration) {
+ rtcSignalQueue = rtcSignalQueue.catch(() => {}).then(async () => {
+  if (generation !== rtcGeneration) return;
+  await post('/signal', message, 12000);
+ });
+ return rtcSignalQueue;
+}
+function closeRTC(notify = true) {
+ clearTimeout(rtcTimer); rtcGeneration++;
+ const previousId = rtcPeerId;
+ rtcPeer?.close(); rtcPeer = null; rtcPeerId = null;
+ rtcCandidates = []; rtcRemoteQueue = Promise.resolve(); rtcSignalQueue = Promise.resolve();
+ rtcVideo.srcObject = null; screen.classList.remove('rtc-live');
+ if (notify && previousId) void post('/signal',{type:'close',peerId:previousId}).catch(() => {});
+}
+function fallbackRTC(message, generation = rtcGeneration) {
+ if (generation !== rtcGeneration || rtcMode === 'jpeg') return;
+ const previousId = rtcPeerId || 'fallback';
+ closeRTC(false); rtcMode = 'jpeg';
+ // The host only enables JPEG work when a receiver explicitly needs fallback.
+ void post('/signal',{type:'fallback',peerId:previousId}).catch(error => toast(error.message));
+ if (message) toast(message);
+}
+async function startRTC() {
+ if (config.transport !== 'webrtc') return;
+ closeRTC(); rtcMode = 'connecting';
+ const generation = rtcGeneration;
+ if (!globalThis.RTCPeerConnection) { fallbackRTC('',generation); return; }
+ rtcPeerId = globalThis.crypto?.randomUUID?.() || ('preview-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2));
+ const peerId = rtcPeerId;
+ const pc = new RTCPeerConnection({iceServers: []}); rtcPeer = pc;
+ let localOfferQueued = false; const localCandidates = [];
+ rtcTimer = setTimeout(() => fallbackRTC('Using compatibility preview for this connection.',generation),10000);
+ pc.addTransceiver('video',{direction:'recvonly'});
+ pc.onicecandidate = event => { if (event.candidate && generation === rtcGeneration) { const message = {type:'candidate',peerId,candidate:event.candidate.toJSON()}; if (!localOfferQueued) { if (localCandidates.length < 64) localCandidates.push(message); } else void sendRTC(message,generation).catch(() => fallbackRTC('',generation)); } };
+ pc.onconnectionstatechange = () => {
+  if (generation !== rtcGeneration) return;
+  if (pc.connectionState === 'failed') fallbackRTC('Using compatibility preview for this connection.',generation);
+  else if (pc.connectionState === 'disconnected') { clearTimeout(rtcTimer); rtcTimer = setTimeout(() => fallbackRTC('',generation),5000); }
+  else if (pc.connectionState === 'connected' && rtcMode === 'webrtc') clearTimeout(rtcTimer);
+ };
+ pc.ontrack = event => {
+  if (generation !== rtcGeneration) return;
+  rtcVideo.srcObject = event.streams[0] || new MediaStream([event.track]);
+  const ready = () => {
+   if (generation !== rtcGeneration || !rtcVideo.videoWidth) return;
+   clearTimeout(rtcTimer); rtcMode = 'webrtc'; screen.classList.add('rtc-live','has-frame'); status('live','Live · WebRTC');
+  };
+  if (rtcVideo.requestVideoFrameCallback) rtcVideo.requestVideoFrameCallback(ready);
+  else rtcVideo.addEventListener('loadeddata',ready,{once:true});
+  void rtcVideo.play().catch(() => fallbackRTC('',generation));
+ };
+ try {
+  await pc.setLocalDescription(await pc.createOffer());
+  if (generation !== rtcGeneration) return;
+  const offered = sendRTC({type:'offer',peerId,sdp:pc.localDescription.sdp},generation);
+  localOfferQueued = true;
+  for (const candidate of localCandidates) void sendRTC(candidate,generation).catch(() => fallbackRTC('',generation));
+  await offered;
+ } catch { fallbackRTC('Using compatibility preview for this connection.',generation); }
+}
+function acceptRTCSignal(message) {
+ if (config.transport !== 'webrtc') return;
+ if (message.type === 'reset' && message.peerId === '*') { void startRTC(); return; }
+ if (message.peerId !== rtcPeerId || !rtcPeer) return;
+ const generation = rtcGeneration, pc = rtcPeer;
+ rtcRemoteQueue = rtcRemoteQueue.then(async () => {
+  if (generation !== rtcGeneration) return;
+  if (message.type === 'answer') {
+   await pc.setRemoteDescription({type:'answer',sdp:message.sdp});
+   for (const candidate of rtcCandidates) await pc.addIceCandidate(candidate);
+   rtcCandidates = [];
+  } else if (message.type === 'candidate') {
+   if (pc.remoteDescription) await pc.addIceCandidate(message.candidate);
+   else if (rtcCandidates.length < 64) rtcCandidates.push(message.candidate);
+  } else if (message.type === 'error') fallbackRTC('Using compatibility preview for this website.',generation);
+ }).catch(() => fallbackRTC('',generation));
+}
 const events = new EventSource(config.base + '/events');
-events.addEventListener('open', () => status('live','Live'));
-events.addEventListener('frame', event => { try { const frame = JSON.parse(event.data); if (typeof frame.data !== 'string') return; display.src = 'data:image/jpeg;base64,' + frame.data; screen.classList.add('has-frame'); status('live','Live'); } catch { toast('Unable to display a preview frame.'); } });
+events.addEventListener('open', () => { if (config.transport === 'webrtc') { status('connecting','Connecting video'); void startRTC(); } else status('live','Live · Compatibility'); });
+events.addEventListener('signal', event => { try { acceptRTCSignal(JSON.parse(event.data)); } catch {} });
+events.addEventListener('frame', event => { if(config.transport === 'webrtc' && rtcMode !== 'jpeg')return; try { const frame = JSON.parse(event.data); if (typeof frame.data !== 'string') return; display.src = 'data:image/jpeg;base64,' + frame.data; screen.classList.add('has-frame'); status('live','Live'); } catch { toast('Unable to display a preview frame.'); } });
 events.addEventListener('state', event => { try { updateState(JSON.parse(event.data)); } catch {} });
 events.addEventListener('error', event => { if (event.data) { try { const error = JSON.parse(event.data); toast(error.message || 'Preview unavailable.'); status('error','Unavailable'); } catch {} } else { status('connecting','Reconnecting'); } });
-window.addEventListener('pagehide', () => events.close());
+window.addEventListener('pagehide', () => { events.close(); closeRTC(); });
 new ResizeObserver(fit).observe($('stage'));
 updateState(config); updateFrame();
 </script>

@@ -93,3 +93,13 @@ Browser tests require local browser/socket access. The QML test requires a Wayla
 Repository configured locally: `git@github.com:jeremielumandong/omarchy-screenhop.git`. No push, tag or GitHub release has been made.
 
 Device presets are informed by [Playwright's descriptors](https://github.com/microsoft/playwright/blob/v1.51.1/packages/playwright-core/src/server/deviceDescriptorsSource.json). Viewport emulation uses the [Chrome DevTools Protocol](https://chromedevtools.github.io/devtools-protocol/tot/Emulation/).
+
+## Native WebRTC
+
+Direct Chromium tab capture now feeds WebRTC video without intermediate JPEG conversion. Same-host prototypes verified phone, rotation, watch and desktop viewports at up to30fps with no droppedframes in shortanimatedchecks. VP8 software encoding measured about0.9–1.0ms/frame forphone and4.4ms/frame fordesktop; synthetic decodedinput latency29–84ms. These are prototype same-host results, not physical Wi-Fi latency guarantees.
+
+Actual ScreenHop integration verified desktop/phone video, no JPEG fallback work for supported pages, pointer/keyboard input, linked followers, phone revocation and hard-navigation renegotiation. A site denying display-capture permission falls back to interactive JPEG. Odd encoded dimensions may round down one pixel while CSS dimensions remain exact.
+
+Video uses WebRTC; production input remains on the ordered HTTP control channel. No external STUN/TURN service or new native dependency is used.
+
+Final validation:42combined authentication, source-browser, signaling, phone and WebRTC integrationtests passed. Visible borderless WebRTC integrationpassed afterfixing Chromium’s sharedcaptureindicator resizingallsourcewindows; policy-deniedautomaticfallback andexplicitJPEGcompatibility integrationpassed. PhysicalphoneWi-Fi remains userverification.

@@ -10,9 +10,9 @@ ScreenHop is an Omarchy shell plugin with 66 searchable presets across 10 catego
 
 ## Device previews
 
-Click **ScreenHop** in the bar, enter your website URL (including localhost), and choose a device. The selected device's name and resolution appear above a centered outline. Framed previews use borderless app windows with no browser tabs, address bar, or persistent toolbar; controls appear from the small menu button on hover or keyboard focus. Phone, tablet and desktop frames surround the live webpage without covering it or changing its viewport. Large devices scale visually to fit. Preview streaming uses JPEG quality 75, a maximum 1280-pixel long edge, and capture pacing of up to 20 frames per second per preview (about 60 across the group). These display optimizations preserve the tested CSS viewport and pixel density.
+Click **ScreenHop** in the bar, enter your website URL (including localhost), and choose a device. The selected device's name and resolution appear above a centered outline. Framed previews use borderless app windows with no browser tabs, address bar, or persistent toolbar; controls appear from the small menu button on hover or keyboard focus. Phone, tablet and desktop frames surround the live webpage without covering it or changing its viewport. Large devices scale visually to fit. Framed desktop and phone previews use native WebRTC video by default. Chromium captures the device tab directly, avoiding the JPEG streaming path. Video targets 30 fps; unchanged frames can be suppressed by the encoder. The viewer automatically falls back to paced JPEG when direct capture or connection fails. These display optimizations preserve the tested CSS viewport and pixel density.
 
-- **Device frame on:** a live offscreen Chromium renderer appears inside a centered device frame. Mouse, keyboard, paste and scrolling are forwarded to the actual page. Use the viewer's Frame toggle to hide the decorative outline without changing viewport dimensions.
+- **Device frame on:** a live offscreen Chromium renderer appears inside a centered device frame. Mouse, keyboard, paste and scrolling are forwarded to the actual page through the existing ordered local input channel. Video uses WebRTC; input currently uses authenticated HTTP, not a WebRTC data channel. Use the viewer's Frame toggle to hide the decorative outline without changing viewport dimensions.
 - **Device frame off in the picker:** opens a direct Chromium window with the device and resolution in its title. This retains native browser controls and is preferable for sign-in troubleshooting or features the streamed viewer does not support.
 - **Portrait/rotation:** swaps width and height before opening another preview.
 
@@ -21,6 +21,8 @@ Use category chips to browse Apple phones, Android phones, tablets, foldables, w
 Specialty presets marked “responsive” are representative layouts, not certified device dimensions or hardware emulation. New branded phone/tablet profiles use [Playwright v1.55.0 device descriptors](https://github.com/microsoft/playwright/blob/v1.55.0/packages/playwright-core/src/server/deviceDescriptorsSource.json), preferring CSS screen size when supplied. Existing preset dimensions remain compatible with earlier ScreenHop sessions.
 
 Framed and direct previews use separate browser profiles. Within each mode, previews share that mode's browser cookies. Existing personal browser sessions are not imported. Named account profiles and session import are planned in [PLAN.md](PLAN.md).
+
+The viewer menu shows **Live · WebRTC** when direct video is connected. Direct capture requires a secure website origin (HTTPS or localhost) and permission to capture; restrictive sites fall back automatically. Chromium may round odd encoded video dimensions down by one pixel; the source CSS viewport is unchanged. `SCREENHOP_TRANSPORT=jpeg` forces the compatibility path when starting a fresh controller.
 
 The frame is visual styling, not a mobile operating system or Safari emulator. Chromium remains the rendering engine. Mobile pages without a viewport meta tag can have a wider layout viewport, as on actual devices. Native file pickers, downloads, browser dialogs, drag-and-drop files and accessibility tree interaction are not exposed through the streamed frame; use direct mode for those workflows.
 
@@ -82,7 +84,8 @@ node viewport.mjs --list
 ## Tests
 
 ```sh
-node --test tests/auth-policy.test.mjs tests/browser.test.mjs tests/viewer.test.mjs tests/phone-remote.test.mjs
+node --test tests/auth-policy.test.mjs tests/browser.test.mjs tests/rtc-viewer.test.mjs tests/rtc-fallback.test.mjs tests/rtc-signaling.test.mjs tests/phone-remote.test.mjs
+SCREENHOP_TRANSPORT=jpeg node --test tests/viewer.test.mjs
 SCREENHOP_TEST_NATIVE=1 node --test tests/browser.test.mjs
 bash tests/ui-smoke.sh
 bash tests/install-smoke.sh

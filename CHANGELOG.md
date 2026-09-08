@@ -19,3 +19,6 @@ Local development version; not published.
 - Fixed phone connectivity with dedicated TCP53318 and scoped UFW setup through the system password prompt.
 - Paced frame capture and reduced image traffic without changing page viewport metrics. Bounded input queues coalesce movement and recover from stalled requests.
 - Fixed unnamed theme buttons and hidden duplicate controls, verified against omarchy.org.
+
+- WebRTC is now the default video transport for framed desktop and phone previews, with direct native Chromium tab capture and on-demand JPEG fallback.
+- Preserved interactive controls, device skins, authentication isolation, navigation reconnection, and phone revocation.
