@@ -1,0 +1,18 @@
+[
+  {"id":"iphone-se","name":"iPhone SE","group":"Apple phones","width":375,"height":667,"dpr":2,"mobile":true},
+  {"id":"iphone-12-mini","name":"iPhone 12 mini","group":"Apple phones","width":375,"height":812,"dpr":3,"mobile":true},
+  {"id":"iphone-13","name":"iPhone 13 / 14","group":"Apple phones","width":390,"height":844,"dpr":3,"mobile":true},
+  {"id":"iphone-14-pro","name":"iPhone 14 Pro","group":"Apple phones","width":393,"height":852,"dpr":3,"mobile":true},
+  {"id":"iphone-14-pro-max","name":"iPhone 14 Pro Max","group":"Apple phones","width":430,"height":932,"dpr":3,"mobile":true},
+  {"id":"galaxy-s8","name":"Samsung Galaxy S8","group":"Android phones","width":360,"height":740,"dpr":3,"mobile":true},
+  {"id":"pixel-5","name":"Google Pixel 5","group":"Android phones","width":393,"height":851,"dpr":2.75,"mobile":true},
+  {"id":"pixel-7","name":"Google Pixel 7","group":"Android phones","width":412,"height":915,"dpr":2.625,"mobile":true},
+  {"id":"galaxy-s24","name":"Samsung Galaxy S24","group":"Android phones","width":360,"height":780,"dpr":3,"mobile":true},
+  {"id":"ipad-mini","name":"iPad Mini","group":"Tablets","width":768,"height":1024,"dpr":2,"mobile":true},
+  {"id":"ipad-pro-11","name":"iPad Pro 11″","group":"Tablets","width":834,"height":1194,"dpr":2,"mobile":true},
+  {"id":"ipad-pro-13","name":"iPad Pro 12.9″","group":"Tablets","width":1024,"height":1366,"dpr":2,"mobile":true},
+  {"id":"laptop","name":"Laptop HD","group":"Computers","width":1366,"height":768,"dpr":1,"mobile":false},
+  {"id":"laptop-retina","name":"Laptop Retina","group":"Computers","width":1440,"height":900,"dpr":2,"mobile":false},
+  {"id":"desktop","name":"Desktop Full HD","group":"Computers","width":1920,"height":1080,"dpr":1,"mobile":false},
+  {"id":"desktop-qhd","name":"Desktop QHD","group":"Computers","width":2560,"height":1440,"dpr":1,"mobile":false}
+]

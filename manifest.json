@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "id": "arkane.screenhop",
+  "name": "ScreenHop",
+  "version": "0.1.0",
+  "author": "arkane",
+  "description": "Choose a device and open a responsive browser preview at its viewport size.",
+  "kinds": ["bar-widget"],
+  "entryPoints": {"barWidget": "Widget.qml"},
+  "barWidget": {
+    "displayName": "ScreenHop",
+    "category": "Development",
+    "allowMultiple": false,
+    "defaultSection": "right"
+  },
+  "license": "MIT"
+}
