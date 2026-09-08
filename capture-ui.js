@@ -107,6 +107,7 @@
     skinOption.disabled = false; badge.hidden = true;
   }
   function cleanup(session) {
+    dispatchEvent(new CustomEvent('screenhop-recording',{detail:false}));
     session.finished = true; clearInterval(session.renderTimer); clearInterval(session.clockTimer); clearTimeout(session.limitTimer);
     stopTracks(session.output); if (session.native !== session.output) stopTracks(session.native);
     if (session.scratchVideo) { session.scratchVideo.pause(); session.scratchVideo.srcObject = null; }
@@ -134,7 +135,7 @@
         nativePromise = navigator.mediaDevices.getDisplayMedia({audio:false,video:{width:{ideal:Math.round(innerWidth*devicePixelRatio)},height:{ideal:Math.round(innerHeight*devicePixelRatio)},frameRate:{ideal:30,max:30}},preferCurrentTab:true,selfBrowserSurface:'include',surfaceSwitching:'exclude',systemAudio:'exclude',monitorTypeSurfaces:'exclude'});
       }
       preparing = true; recordButton.disabled = true; skinOption.disabled = true;
-      session = {skin,mimeType,chunks:[],bytes:0,finished:false,stopping:false,cancelled:false,restoreFrame:skin && !showFrame}; preparingSession = session;
+      session = {skin,mimeType,chunks:[],bytes:0,finished:false,stopping:false,cancelled:false,restoreFrame:skin && !showFrame}; preparingSession = session; dispatchEvent(new CustomEvent('screenhop-recording',{detail:true}));
       document.body.classList.toggle('recording-skin',skin);
       if (session.restoreFrame) { showFrame = true; updateFrame(); }
       frameButton.disabled = true; hideDrawer();

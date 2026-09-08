@@ -4,7 +4,7 @@
   "name": "ScreenHop",
   "version": "1.0.0",
   "author": "arkane",
-  "description": "Centered device previews with linked browsing and authentication isolation for Omarchy.",
+  "description": "Test responsive websites in device previews with linked browsing, screenshots and phone control.",
   "kinds": [
     "bar-widget"
   ],

@@ -1,3 +1,4 @@
+import {serveSkinAsset} from './skin-assets.mjs';
 import {readFile} from 'node:fs/promises';
 import {createServer} from 'node:http';
 import {randomBytes} from 'node:crypto';
@@ -47,7 +48,7 @@ export class PhoneRemote {
     } catch { /* The copyable pairing URL remains available without qrencode. */ }
     return remote;
   }
-  info() {return this.enabled?{enabled:true,urls:[...this.urls],url:this.urls[0],qrData:this.qrData,port:this.port,reason:this.reason}:{enabled:false,urls:[],url:'',qrData:''};}
+  info() {return this.enabled?{enabled:true,connectedViewers:this.streams.size,connectedPeers:this.peers.size,urls:[...this.urls],url:this.urls[0],qrData:this.qrData,port:this.port,reason:this.reason}:{enabled:false,urls:[],url:'',qrData:''};}
   async close() {
     this.enabled=false;this.token='';this.urls=[];this.qrData='';
     for(const [stream,cleanup] of this.streams){cleanup();stream.destroy();}
@@ -60,7 +61,7 @@ export class PhoneRemote {
   }
   async handle(req,res) {
     res.setHeader('Cache-Control','no-store');res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Referrer-Policy','no-referrer');
-    res.setHeader('Content-Security-Policy',"default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; media-src 'self' blob:; connect-src 'self'; frame-ancestors 'none'; form-action 'none'; base-uri 'none'");
+    res.setHeader('Content-Security-Policy',"default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; media-src 'self' blob:; connect-src 'self'; frame-ancestors 'none'; form-action 'none'; base-uri 'none'");
     const validHosts=new Set([...this.addresses].map(address=>`${address}:${this.port}`));
     if(!this.enabled||!validHosts.has(req.headers.host)){res.writeHead(403);res.end();return;}
     const origin='http://'+req.headers.host;
@@ -75,10 +76,11 @@ export class PhoneRemote {
       res.setHeader('Content-Type','text/html; charset=utf-8');
       res.end(`<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>ScreenHop remote</title><style>body{font:16px system-ui;background:#16181d;color:#f2f3f5;max-width:36rem;margin:auto;padding:24px}a{display:flex;justify-content:space-between;gap:16px;color:inherit;text-decoration:none;background:#272b34;padding:20px;border-radius:12px;margin:12px 0}span,p{color:#b9c2d0}</style></head><body><h1>ScreenHop remote</h1><p>Choose a preview to control. Enable Link previews to drive the other screens. Linking pauses during sign-in and security checks.</p>${devices||'<p>No framed previews are open. Open a device preview on your computer, then refresh this page.</p>'}</body></html>`);return;
     }
-    const match=suffix.match(/^view\/([A-Za-z0-9_-]+)(?:\/(events|input|action|signal|capture-ui\.js))?$/);
+    const match=suffix.match(/^view\/([A-Za-z0-9_-]+)(?:\/(events|input|action|signal|capture-ui\.js|skin\/[A-Za-z0-9_-]+\/[A-Za-z0-9_.-]+))?$/);
     const record=match&&this.host.records.get(match[1]);
     if(!record){res.writeHead(404);res.end();return;}
     const route=match[2];
+    if(req.method==='GET'&&route?.startsWith('skin/')){await serveSkinAsset(res,record.device.skinAsset,route);return;}
     if(req.method==='GET'&&!route){
       const config={...record.device,id:record.id,base:prefix+'view/'+record.id,url:record.url,linked:record.linked,reason:record.reason||'',phone:true,transport:this.host.signal?'webrtc':'jpeg'};
       res.setHeader('Content-Type','text/html; charset=utf-8');
@@ -90,12 +92,9 @@ export class PhoneRemote {
     }
     if(req.method==='GET'&&route==='events'){
       res.writeHead(200,{'Content-Type':'text/event-stream','Connection':'keep-alive'});
-      record.streams.add(res);
-      const heartbeat=setInterval(()=>res.write(': keepalive\n\n'),10000);
-      const cleanup=()=>{clearInterval(heartbeat);record.streams.delete(res);this.streams.delete(res);};
-      this.streams.set(res,cleanup);res.once('close',cleanup);
-      res.write('event: state\ndata: '+JSON.stringify({url:record.url,linked:record.linked,reason:record.reason||''})+'\n\n');
-      if(record.frame)res.write('event: frame\ndata: '+JSON.stringify({data:record.frame})+'\n\n');return;
+      const unsubscribe=this.host.subscribe(record,res,new URL(req.url,origin).searchParams.get('clientId')||'');
+      const cleanup=()=>{unsubscribe();this.streams.delete(res);if(!res.replaced)for(const peerId of res.peers)this.peers.delete(record.id+':'+peerId);};
+      this.streams.set(res,cleanup);res.once('close',cleanup);return;
     }
     if(req.method!=='POST'||!['input','action','signal'].includes(route)){res.writeHead(405);res.end();return;}
     if(!req.headers['content-type']?.toLowerCase().startsWith('application/json'))throw new Error('JSON required');
@@ -107,11 +106,17 @@ export class PhoneRemote {
       const key=record.id+':'+message.peerId;
       if(message.type==='offer'||message.type==='fallback'){
         if(!this.peers.has(key)&&[...this.peers.values()].filter(peer=>peer.id===record.id).length>=8)throw new Error('Too many phone viewers');
-        this.peers.set(key,{id:record.id,peerId:message.peerId});
+        this.peers.set(key,{id:record.id,peerId:message.peerId,clientId:message.clientId});
       }else if(!this.peers.has(key))throw new Error('Unknown phone video peer');
-      const operation=Promise.resolve().then(()=>this.host.signal(record.id,message));
+      const operation=Promise.resolve().then(()=>this.host.receiveSignal(record,message));
       this.pendingSignals.add(operation);
-      try {await operation;if(message.type==='close')this.peers.delete(key);}
+      try {
+        await operation;if(message.type==='close')this.peers.delete(key);
+        if(message.clientId&&(message.type==='ready'||message.type==='fallback')){
+          const stream=[...record.streams].find(s=>s.clientId===message.clientId);
+          for(const [peerKey,peer] of this.peers)if(peer.id===record.id&&peer.clientId===message.clientId&&!stream?.peers.has(peer.peerId))this.peers.delete(peerKey);
+        }
+      }
       finally {this.pendingSignals.delete(operation);}
     }else if(route==='input'){
       inputCommand(payload,record.device.width,record.device.height);

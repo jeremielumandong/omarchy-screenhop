@@ -41,7 +41,8 @@ test('independent device windows, persistent viewports, rotation and navigation'
     async function metrics(id = targetId) { const value = await rpc(join(state,'controller.sock'), {inspect:true, targetId:id}); value.dpr = Math.round(value.dpr * 1e6) / 1e6; return value; }
     async function launch(...args) { targetId = JSON.parse((await run(...args)).stdout).targetId; }
     await new Promise(r=>setTimeout(r,500));
-    assert.deepEqual(await metrics(), {width:390,height:844,dpr:3,touch:5,phone:true,url:url+'/'});
+    const initial = await metrics();
+    assert.deepEqual(Object.fromEntries(['width','height','dpr','touch','phone','url'].map(key=>[key,initial[key]])), {width:390,height:844,dpr:3,touch:5,phone:true,url:url+'/'});
     await launch('--device','iphone-13','--url',url,'--landscape');
     let m = await metrics(); assert.equal(m.width,844); assert.equal(m.height,390); assert.equal(m.phone,false);
     await launch('--device','desktop','--url',url+'/desktop');
@@ -90,6 +91,25 @@ test('independent device windows, persistent viewports, rotation and navigation'
     await cdp.send('Input.dispatchMouseEvent',{type:'mouseReleased',x:70*themeScale,y:290*themeScale,button:'left',clickCount:1},sourceSession);
     await new Promise(r=>setTimeout(r,400));
     assert.equal(await evaluate(otherSession,'document.body.dataset.theme'),'Light','ambiguous visible controls must not replay');
+    // Hydrated controls use different IDs; the accessible action is stable.
+    for (const [index, session] of [sourceSession,otherSession].entries()) await evaluate(session, `(()=>{
+      document.body.insertAdjacentHTML('beforeend', '<button type="button" id="generated-${index}" aria-label="Apply color" style="position:fixed;left:20px;top:380px;width:140px;height:40px" onclick="document.body.dataset.color=\\'blue\\'">Blue</button>');
+      document.body.insertAdjacentHTML('beforeend', '<button type="button" aria-label="Apply color" inert style="position:fixed;left:180px;top:380px" onclick="document.body.dataset.color=\\'wrong\\'">Blue</button>');
+      document.body.insertAdjacentHTML('beforeend', '<button type="button" aria-label="Use Nord" style="position:fixed;left:180px;top:440px" onclick="document.body.dataset.panel=\\'wrong-page\\'">Nord</button><div role="dialog" aria-label="Palette"><button type="button" aria-label="Use Nord" style="position:fixed;left:180px;top:480px" onclick="document.body.dataset.panel=\\'wrong-image\\'"></button><button type="button" aria-label="Use Nord" style="position:fixed;left:20px;top:440px;width:140px;height:40px" onclick="document.body.dataset.panel=\\'nord\\'">Nord</button></div>');
+    })()`);
+    const clickAt = async y => {
+      await new Promise(r=>setTimeout(r,600));
+      await cdp.send('Input.dispatchMouseEvent',{type:'mousePressed',x:70*themeScale,y:y*themeScale,button:'left',clickCount:1},sourceSession);
+      await cdp.send('Input.dispatchMouseEvent',{type:'mouseReleased',x:70*themeScale,y:y*themeScale,button:'left',clickCount:1},sourceSession);
+      await new Promise(r=>setTimeout(r,400));
+    };
+    await clickAt(400);
+    assert.equal(await evaluate(otherSession,'document.body.dataset.color'),'blue','semantic controls match despite different generated IDs and inert duplicates');
+    await clickAt(460);
+    assert.equal(await evaluate(otherSession,'document.body.dataset.panel'),'nord','dialog scope plus text selects the labeled option, not duplicate image or page buttons');
+    await evaluate(otherSession, `document.querySelector('[role="dialog"]').remove();document.body.dataset.panel='unchanged'`);
+    await clickAt(460);
+    assert.equal(await evaluate(otherSession,'document.body.dataset.panel'),'unchanged','missing destination dialog never falls back to a page button');
     console.log('Theme evidence: unnamed buttons and responsive duplicates synchronize; ambiguous visible controls are skipped.');
     await evaluate(sourceSession,'scrollTo(0,1000)');
     await new Promise(r=>setTimeout(r,400));

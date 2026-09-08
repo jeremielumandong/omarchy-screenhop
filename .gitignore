@@ -3,3 +3,7 @@ node_modules/
 .cache/
 profiles/
 browser/
+
+__pycache__/
+*.pyc
+dist/

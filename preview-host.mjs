@@ -1,3 +1,4 @@
+import {serveSkinAsset} from './skin-assets.mjs';
 import {createServer} from 'node:http';
 import {randomBytes} from 'node:crypto';
 import {readFile} from 'node:fs/promises';
@@ -38,10 +39,47 @@ export class PreviewHost {
     this.broadcast(record,'signal',rtcMessage(message,{response:true}));
   }
   broadcast(record,event,value) {
+    const serialized='event: '+event+'\ndata: '+JSON.stringify(value)+'\n\n';
     for(const stream of record.streams) {
-      // A slow viewer drops frames instead of accumulating unbounded image data.
-      if(stream.writableLength<2_000_000)stream.write('event: '+event+'\ndata: '+JSON.stringify(value)+'\n\n');
+      if(event==='frame'&&stream.clientId&&stream.transport!=='jpeg')continue;
+      if(event==='signal'&&value.peerId!=='*'&&stream.clientId&&!stream.peers?.has(value.peerId))continue;
+      sendStream(stream,event,serialized);
     }
+  }
+  subscribe(record,res,clientId='') {
+    if(clientId&&!/^[A-Za-z0-9_-]{8,80}$/.test(clientId))throw new Error('Invalid viewer identity');
+    res.clientId=clientId;res.peers=new Set();res.transport=this.signal?'connecting':'jpeg';
+    // Replace a reconnecting event stream before its close callback runs.
+    for(const stream of record.streams)if(clientId&&stream.clientId===clientId){res.peers=stream.peers;res.transport=stream.transport;stream.replaced=true;stream.end();}
+    record.streams.add(res);
+    sendStream(res,'state','event: state\ndata: '+JSON.stringify({url:record.url,linked:record.linked,reason:record.reason||''})+'\n\n');
+    if(record.frame&&(!clientId||res.transport==='jpeg'))sendStream(res,'frame','event: frame\ndata: '+JSON.stringify({data:record.frame})+'\n\n');
+    const heartbeat=setInterval(()=>{if(!res.writableNeedDrain)res.write(': keepalive\n\n');},10000);
+    let cleaned=false;
+    const cleanup=()=>{if(cleaned)return;cleaned=true;clearInterval(heartbeat);record.streams.delete(res);if(!res.replaced)for(const peerId of res.peers)Promise.resolve(this.signal?.(record.id,{peerId,type:'close',clientId})).catch(()=>{});};
+    res.once('close',cleanup);return cleanup;
+  }
+  async receiveSignal(record,message) {
+    const stream=message.clientId&&[...record.streams].find(s=>s.clientId===message.clientId);
+    if(message.clientId&&!stream)throw new Error('Viewer disconnected; reconnect first');
+    if(stream){
+      if(message.type==='offer'||message.type==='fallback')stream.peers.add(message.peerId);
+      else if(!stream.peers.has(message.peerId))throw new Error('Unknown viewer peer');
+      if(message.type==='fallback')stream.transport='jpeg';
+    }
+    await this.signal(record.id,message);
+    if(stream&&message.type==='fallback'&&record.frame)sendStream(stream,'frame','event: frame\ndata: '+JSON.stringify({data:record.frame})+'\n\n');
+    if(stream&&(message.type==='ready'||message.type==='fallback')) {
+      // A reconnect creates a new RTC peer while the old peer keeps JPEG alive.
+      // Once the replacement is ready (or replaces a failed attempt), release
+      // only this viewer's obsolete peers; other viewers may still need JPEG.
+      for(const peerId of [...stream.peers])if(peerId!==message.peerId){
+        await this.signal(record.id,{type:'close',peerId,clientId:message.clientId});
+        stream.peers.delete(peerId);
+      }
+      if(message.type==='ready'){stream.transport='webrtc';stream.pendingFrame=null;}
+    }
+    if(message.type==='close')stream?.peers.delete(message.peerId);
   }
   remove(id) {
     const record=this.records.get(id); if(!record)return;
@@ -50,12 +88,13 @@ export class PreviewHost {
   async handle(req,res) {
     res.setHeader('Cache-Control','no-store'); res.setHeader('X-Content-Type-Options','nosniff');
     res.setHeader('Referrer-Policy','no-referrer');
-    res.setHeader('Content-Security-Policy',"default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; media-src 'self' blob:; connect-src 'self'; frame-ancestors 'none'");
+    res.setHeader('Content-Security-Policy',"default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; media-src 'self' blob:; connect-src 'self'; frame-ancestors 'none'");
     const path=new URL(req.url,this.origin).pathname;
-    const match=path.match(new RegExp('^/'+this.token+'/view/([A-Fa-f0-9]+)(/(events|input|action|signal|capture-ui\\.js))?$'));
+    const match=path.match(new RegExp('^/'+this.token+'/view/([A-Fa-f0-9]+)(/(events|input|action|signal|capture-ui\\.js|skin/[A-Za-z0-9_-]+/[A-Za-z0-9_.-]+))?$'));
     const record=match&&this.records.get(match[1]);
     if(!record){res.writeHead(404);res.end('Preview not found');return;}
     const route=match[3];
+    if(req.method==='GET'&&route?.startsWith('skin/')){await serveSkinAsset(res,record.device.skinAsset,route);return;}
     if(req.method==='GET'&&!route) {
       const config={...record.device,id:record.id,base:record.base,url:record.url,linked:record.linked,reason:record.reason||'',transport:this.signal?'webrtc':'jpeg'};
       const json=JSON.stringify(config).replaceAll('<','\\u003c');
@@ -68,11 +107,7 @@ export class PreviewHost {
     }
     if(req.method==='GET'&&route==='events') {
       res.writeHead(200,{'Content-Type':'text/event-stream','Connection':'keep-alive'});
-      record.streams.add(res);
-      res.write('event: state\ndata: '+JSON.stringify({url:record.url,linked:record.linked,reason:record.reason||''})+'\n\n');
-      if(record.frame)res.write('event: frame\ndata: '+JSON.stringify({data:record.frame})+'\n\n');
-      const heartbeat=setInterval(()=>res.write(': keepalive\n\n'),10000);
-      req.on('close',()=>{clearInterval(heartbeat);record.streams.delete(res)}); return;
+      this.subscribe(record,res,new URL(req.url,this.origin).searchParams.get('clientId')||''); return;
     }
     if(req.method!=='POST'||!['input','action','signal'].includes(route)){res.writeHead(405);res.end();return;}
     if(req.headers.host!==new URL(this.origin).host)throw new Error('Invalid host');
@@ -82,7 +117,7 @@ export class PreviewHost {
     const payload=JSON.parse(body);let result;
     if(route==='signal'){
       if(!this.signal)throw new Error('Video signaling unavailable');
-      await this.signal(record.id,rtcMessage(payload));
+      await this.receiveSignal(record,rtcMessage(payload));
     }else if(route==='input')await this.input(record.id,payload);
     else result=await this.action(record.id,actionMessage(payload));
     const response=JSON.stringify(result===undefined?{ok:true}:result);
@@ -98,6 +133,12 @@ export class PreviewHost {
 export function inputCommand(data,width,height) {
   const number=(v,min,max)=>{if(typeof v!=='number'||!Number.isFinite(v))throw new Error('Invalid input coordinate');return Math.min(max,Math.max(min,v))};
   const modifiers=number(data.modifiers??0,0,15)|0;
+  if(data.kind==='touch') {
+    if(!['touchStart','touchMove','touchEnd','touchCancel'].includes(data.type))throw new Error('Invalid touch input');
+    const touchPoints=['touchEnd','touchCancel'].includes(data.type)?[]:[{x:number(data.x,0,width),y:number(data.y,0,height),id:0,radiusX:1,radiusY:1,force:1}];
+    return ['Input.dispatchTouchEvent',{type:data.type,touchPoints,modifiers}];
+  }
+  if(data.kind==='pointerleave')return ['Input.dispatchMouseEvent',{type:'mouseMoved',x:-1,y:-1,button:'none',buttons:0,modifiers:0}];
   if(data.kind==='mouse'||data.kind==='wheel') {
     const x=number(data.x,0,width),y=number(data.y,0,height);
     if(data.kind==='wheel')return ['Input.dispatchMouseEvent',{type:'mouseWheel',x,y,deltaX:number(data.deltaX,-10000,10000),deltaY:number(data.deltaY,-10000,10000),modifiers}];
@@ -121,9 +162,14 @@ export function inputCommand(data,width,height) {
 export function rtcMessage(data,{response=false}={}) {
   if(response&&data?.type==='reset'&&data.peerId==='*')return {type:'reset',peerId:'*'};
   if(!data||typeof data!=='object'||Array.isArray(data)||typeof data.peerId!=='string'||!/^[A-Za-z0-9_-]{8,80}$/.test(data.peerId))throw new Error('Invalid video peer');
-  const allowed=response?['answer','candidate','error']:['offer','candidate','close','fallback','resize'];
+  const allowed=response?['answer','candidate','error']:['offer','candidate','close','fallback','resize','ready','activity'];
   if(!allowed.includes(data.type))throw new Error('Invalid video signal');
   const message={peerId:data.peerId,type:data.type};
+  if(!response&&data.clientId!==undefined){if(typeof data.clientId!=='string'||!/^[A-Za-z0-9_-]{8,80}$/.test(data.clientId))throw new Error('Invalid viewer identity');message.clientId=data.clientId;}
+  if(data.type==='activity'){
+    if(!Number.isInteger(data.fps)||data.fps<1||data.fps>30||typeof data.visible!=='boolean'||typeof data.active!=='boolean')throw new Error('Invalid capture activity');
+    Object.assign(message,{fps:data.fps,visible:data.visible,active:data.active});
+  }
   if(data.type==='offer'||data.type==='answer') {
     if(typeof data.sdp!=='string'||!data.sdp.startsWith('v=0')||data.sdp.length>100000)throw new Error('Invalid session description');
     message.sdp=data.sdp;
@@ -148,4 +194,17 @@ export function actionMessage(payload) {
   if(payload.action==='link'){if(typeof payload.enabled!=='boolean')throw new Error('Invalid link state');return {action:'link',enabled:payload.enabled};}
   if(payload.action==='screenshot'){if(typeof payload.skin!=='boolean')throw new Error('Choose whether to include the device skin');return {action:'screenshot',skin:payload.skin};}
   return {action:payload.action};
+}
+
+// Keep one newest image outside Node's bounded writable buffer. Control events
+// remain ordered; disconnect pathological consumers instead of silently dropping them.
+export function sendStream(stream,event,serialized) {
+  if(stream.destroyed||stream.writableEnded)return;
+  if(event==='frame'&&stream.writableNeedDrain){
+    stream.pendingFrame=serialized;
+    if(!stream.frameDrain){stream.frameDrain=true;stream.once('drain',()=>{stream.frameDrain=false;const frame=stream.pendingFrame;stream.pendingFrame=null;if(frame)sendStream(stream,'frame',frame);});}
+    return;
+  }
+  if(event!=='frame'&&stream.writableLength>2_000_000){stream.destroy();return;}
+  stream.write(serialized);
 }

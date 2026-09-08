@@ -18,7 +18,7 @@ test('WebRTC exact device geometry, interactive input, navigation recovery and p
  });
  await new Promise(r=>http.listen(0,'127.0.0.1',r));
  const url='http://127.0.0.1:'+http.address().port;
- const run=async(...args)=>JSON.parse((await exec(process.execPath,[helper,'--state',state,...args],{timeout:40000})).stdout);
+ const run=async(...args)=>JSON.parse((await exec(process.execPath,[helper,'--state',state,...args],{timeout:40000,env:{...process.env,SCREENHOP_TEST_PHONE_PORT:'0'}})).stdout);
  let source,viewer;
  try{
   const first=await run(...(process.env.SCREENHOP_TEST_HEADFUL?[]:['--headless']),'--device','iphone-13','--url',url);
@@ -50,8 +50,9 @@ test('WebRTC exact device geometry, interactive input, navigation recovery and p
   async function clickView(x,y){await viewer.send('Input.dispatchMouseEvent',{type:'mousePressed',x,y,button:'left',clickCount:1},view);await viewer.send('Input.dispatchMouseEvent',{type:'mouseReleased',x,y,button:'left',clickCount:1},view)}
   const button=await evalSource('(()=>{const r=document.querySelector("#counter").getBoundingClientRect();return{x:r.x+r.width/2,y:r.y+r.height/2}})()');
   const screen=await evalView('(()=>{const r=document.querySelector("#screen").getBoundingClientRect();return{x:r.x,y:r.y,w:r.width,h:r.height}})()');
+  await evalSource('window.tapDebug=[];for(const type of ["touchstart","touchend","touchcancel","click"])document.addEventListener(type,e=>tapDebug.push({type,target:e.target.id}))');
   await clickView(screen.x+button.x*screen.w/390,screen.y+button.y*screen.h/844);
-  await eventually(()=>evalSource('document.querySelector("#counter").textContent === "1"'),'click forwarded to real webpage');
+  try { await eventually(()=>evalSource('document.querySelector("#counter").textContent === "1"'),'click forwarded to real webpage'); } catch(error) {console.log(await evalSource('({events:tapDebug,counter:document.querySelector("#counter").textContent})'));console.log(await evalView('({toast:document.querySelector("#toast").textContent,capturedPointer,remoteTouch})'));throw error;}
   const field=await evalSource('(()=>{const r=document.querySelector("#entry").getBoundingClientRect();return{x:r.x+20,y:r.y+20}})()');
   await clickView(screen.x+field.x*screen.w/390,screen.y+field.y*screen.h/844);
   await viewer.send('Input.dispatchKeyEvent',{type:'keyDown',key:'h',code:'KeyH',windowsVirtualKeyCode:72,text:'h'},view);

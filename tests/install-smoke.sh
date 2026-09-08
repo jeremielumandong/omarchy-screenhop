@@ -19,7 +19,7 @@ with tempfile.TemporaryDirectory(prefix="screenhop-install-smoke-") as temporary
     commands.mkdir()
     for name in ("omarchy-shell", "omarchy"):
         command = commands / name
-        command.write_text("#!/bin/sh\nexit 0\n")
+        command.write_text("#!/bin/sh\nprintf '%s\\n' \"$*\" >> \"$SCREENHOP_INSTALL_TEST_LOG\"\nexit 0\n")
         command.chmod(0o755)
 
     plugins = config / "omarchy/plugins"
@@ -34,9 +34,11 @@ with tempfile.TemporaryDirectory(prefix="screenhop-install-smoke-") as temporary
             "id": "arkane.screenhop", "version": version,
         }))
         (plugin / "preserved-marker").write_text(version)
+        (plugin / "Widget.qml").write_text("// older widget")
 
     environment = dict(
         os.environ,
+        SCREENHOP_INSTALL_TEST_LOG=str(root / "commands.log"),
         XDG_CONFIG_HOME=str(config),
         XDG_STATE_HOME=str(state),
         PATH=str(commands) + os.pathsep + os.environ.get("PATH", os.defpath),
@@ -52,8 +54,18 @@ with tempfile.TemporaryDirectory(prefix="screenhop-install-smoke-") as temporary
         assert discoverable[0].parent == plugins / "arkane.screenhop"
         assert json.loads(discoverable[0].read_text())["version"] == "1.0.0"
 
+    assert (root / "commands.log").read_text().splitlines().count("restart shell") == 1
     assert (plugins / "arkane.screenhop/phone-remote.mjs").is_file()
-    assert len(json.loads((plugins / "arkane.screenhop/devices.json").read_text())) >= 66
+    assert len(json.loads((plugins / "arkane.screenhop/devices.json").read_text())) == 103
+    installed = plugins / "arkane.screenhop"
+    assert (installed / "skin-assets.mjs").is_file()
+    assert (installed / "docs/DEVICE_SOURCES.md").is_file()
+    for device in json.loads((installed / "devices.json").read_text()):
+        skin = device.get("skinAsset")
+        if skin:
+            for name in [skin["foreground"]] + [color["file"] for color in skin["colors"]]:
+                asset = Path("assets/skins") / skin["id"] / name
+                assert (installed / asset).read_bytes() == (source / asset).read_bytes()
     backups = list((state / "omarchy/plugin-backups").glob("*/plugin/manifest.json"))
     assert len(backups) == 3, backups
     assert sorted(json.loads(path.read_text())["version"] for path in backups) == [

@@ -9,6 +9,14 @@ BarWidget {
     id: root
     moduleName: "arkane.screenhop"
     Component.onCompleted: console.info("ScreenHop 1.0.0 widget loaded:", pluginDirectory, "initial URL:", website)
+    property bool toolsExpanded: false
+    property var workspaceNames: []
+    property string workspaceName: ""
+    property string buildStatus: ""
+    property bool updateAvailable: false
+    property bool confirmUpdate: false
+    property bool batchSkin: true
+    property int phoneViewers: 0
     property bool opened: false
     property bool popoutSwitchClosing: false
     property var devices: []
@@ -39,7 +47,7 @@ BarWidget {
     property string selectedId: ""
     property string status: "Choose a device to open a browser preview."
     property string launchError: ""
-    readonly property bool busy: launcher.running || linkUpdater.running || phoneUpdater.running || phoneFirewall.running
+    readonly property bool busy: launcher.running || linkUpdater.running || phoneUpdater.running || phoneFirewall.running || workspaceRunner.running
     readonly property string pluginDirectory: decodeURIComponent(Qt.resolvedUrl(".").toString().replace(/^file:\/\//, "")).replace(/\/?$/, "/")
     readonly property var groups: {
         var result = [];
@@ -135,6 +143,7 @@ BarWidget {
                         root.phoneUrl = message.enabled ? (message.url || "") : "";
                         root.phoneQrData = message.enabled ? (message.qrData || "") : "";
                         root.phoneReason = message.reason || "";
+                        root.phoneViewers = message.connectedViewers || 0;
                     }
                 } catch (error) { /* Ignore diagnostic lines. */ }
             }
@@ -238,6 +247,33 @@ BarWidget {
             } else if (!root.launchError) {
                 root.launchError = "Could not update linked previews (exit " + exitCode + ").";
             }
+        }
+    }
+    function workspaceAction(args) {
+        if (busy) return;
+        launchError = "";
+        workspaceRunner.command = ["node", pluginDirectory + "workspaces.mjs"].concat(args);
+        workspaceRunner.running = true;
+    }
+    Process {
+        id: workspaceRunner
+        stdout: SplitParser {
+            onRead: data => {
+                try {
+                    var message = JSON.parse(data);
+                    if (message.names) root.workspaceNames = message.names;
+                    if (message.message) root.status = message.message;
+                    if (message.status === "build") {
+                        root.buildStatus = "Installed: " + message.installed + " · Running: " + message.running;
+                        root.updateAvailable = message.updateAvailable;
+                    }
+                } catch (error) { /* Ignore diagnostic lines. */ }
+            }
+        }
+        stderr: SplitParser { onRead: data => { if (data.trim()) root.launchError = data.trim(); } }
+        onExited: (exitCode, exitStatus) => {
+            root.confirmUpdate = false;
+            if (exitCode !== 0 && !root.launchError) root.launchError = "ScreenHop could not complete that action.";
         }
     }
     implicitWidth: button.implicitWidth
@@ -439,6 +475,51 @@ BarWidget {
                     id: catalog
                     width: scroll.width
                     spacing: Style.space(18)
+                    Button {
+                        text: root.toolsExpanded ? "− Workspace and tools" : "+ Workspace and tools"
+                        bordered: true; focusable: true; enabled: !root.busy
+                        onClicked: { root.toolsExpanded = !root.toolsExpanded; if (root.toolsExpanded) root.workspaceAction(["--list"]); }
+                    }
+                    Column {
+                        visible: root.toolsExpanded
+                        width: parent.width
+                        spacing: Style.space(8)
+                        Label { width: parent.width; text: "Save your open framed previews, or reopen a saved device set. URLs and device choices are saved; sign-in sessions are not exported."; font.pixelSize: Style.font.bodySmall }
+                        Row {
+                            width: parent.width; spacing: Style.space(6)
+                            TextField { width: parent.width - saveWorkspaceButton.width - parent.spacing; placeholderText: "Workspace name"; Accessible.name: "Workspace name"; text: root.workspaceName; onTextEdited: root.workspaceName = text; enabled: !root.busy }
+                            Button { id: saveWorkspaceButton; text: "Save open previews"; bordered: true; focusable: true; enabled: !root.busy && root.deviceFrame && root.workspaceName.trim().length > 0; onClicked: root.workspaceAction(["--save", root.workspaceName]) }
+                        }
+                        Flow {
+                            width: parent.width; spacing: Style.space(6)
+                            Repeater {
+                                model: root.workspaceNames
+                                delegate: Button { required property string modelData; text: "Open " + modelData; bordered: true; focusable: true; enabled: !root.busy; onClicked: { root.deviceFrame = true; root.workspaceAction(["--restore", modelData]); } }
+                            }
+                        }
+                        Row {
+                            spacing: Style.space(6)
+                            Button { text: root.batchSkin ? "✓ Include skin" : "Page only"; selected: root.batchSkin; bordered: true; focusable: true; enabled: !root.busy; onClicked: root.batchSkin = !root.batchSkin }
+                            Button { text: "Screenshot all"; bordered: true; focusable: true; enabled: !root.busy && root.deviceFrame; onClicked: root.workspaceAction(root.batchSkin ? ["--batch"] : ["--batch", "--page-only"]) }
+                        }
+                        Label { width: parent.width; text: "ScreenHop 1.0.0 · " + (root.buildStatus || "Check the running build before applying an update."); font.pixelSize: Style.font.bodySmall }
+                        Row {
+                            spacing: Style.space(6)
+                            Button { text: "Check build"; bordered: true; focusable: true; enabled: !root.busy; onClicked: root.workspaceAction(["--status"]) }
+                            Button { text: "Apply update…"; visible: root.updateAvailable; bordered: true; focusable: true; enabled: !root.busy; onClicked: root.confirmUpdate = true }
+                        }
+                        Column {
+                            visible: root.confirmUpdate; width: parent.width; spacing: Style.space(6)
+                            Label { width: parent.width; text: "This closes and reopens all framed previews. Unsaved page changes will be lost and phone sharing will stop. Device choices and URLs are restored; linking starts off. Finish signing in first."; font.pixelSize: Style.font.bodySmall }
+                            Row {
+                                spacing: Style.space(6)
+                                Button { text: "Close previews and update"; bordered: true; focusable: true; enabled: !root.busy; onClicked: root.workspaceAction(["--apply-update", "--confirm-close"]) }
+                                Button { text: "Cancel"; bordered: true; focusable: true; enabled: !root.busy; onClicked: root.confirmUpdate = false }
+                            }
+                        }
+                        Label { width: parent.width; text: "Phone: " + (root.phoneEnabled ? root.phoneViewers + " connected preview viewer(s). Keep both devices on the same network; guest Wi-Fi isolation can block access." : "Sharing is off."); font.pixelSize: Style.font.bodySmall }
+                        Button { text: "Refresh phone status"; bordered: true; focusable: true; enabled: !root.busy; onClicked: root.refreshPhone() }
+                    }
                     Flow {
                         width: parent.width
                         spacing: Style.space(6)

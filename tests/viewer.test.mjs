@@ -30,7 +30,7 @@ test('centered live device frame, input forwarding, authentication isolation and
   const evalSource=async expr=>(await source.send('Runtime.evaluate',{expression:expr,returnByValue:true},page)).result.value;
   const evalView=async expr=>(await viewer.send('Runtime.evaluate',{expression:expr,returnByValue:true},view)).result.value;
   const other=()=>rpc(state+'/controller.sock',{inspect:true,targetId:second.targetId});
-  await eventually(()=>evalView('document.querySelector("#display")?.naturalWidth > 0'),'live page image');
+  await eventually(()=>evalView('document.querySelector("#display")?.naturalWidth > 0 || document.querySelector("#rtc-video")?.videoWidth > 0'),'live page image');
   assert.match(await evalView('document.title'),/iPhone 13/);
   assert.match(await evalView('document.querySelector("#dimensions").textContent'),/390 × 844/);
   const geometry=await evalView('(()=>{const d=document.querySelector("#device").getBoundingClientRect(),s=document.querySelector("#stage").getBoundingClientRect();return{center:d.x+d.width/2,stage:s.x+s.width/2,centerY:d.y+d.height/2,stageY:s.y+s.height/2}})()');

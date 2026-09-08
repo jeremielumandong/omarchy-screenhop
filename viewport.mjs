@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import {buildIdentity} from './build.mjs';
 // ScreenHop: a local controller keeps CDP attached while the preview is open.
 import { readFile, mkdir, unlink, chmod } from 'node:fs/promises';
 import { openSync, closeSync } from 'node:fs';
@@ -93,6 +94,7 @@ function hyprWindows() {
   catch { return []; }
 }
 async function serve(state, headless) {
+  const loadedBuild=await buildIdentity();
   const profile = join(state, 'browser');
   await mkdir(profile, {recursive:true, mode:0o700});
   let cdp, viewerCdp, host, phoneRemote, lastUsed = Date.now();
@@ -183,14 +185,16 @@ async function serve(state, headless) {
       screenWidth:device.width, screenHeight:device.height, scale:1,
       screenOrientation:{type:device.width > device.height ? 'landscapePrimary' : 'portraitPrimary', angle:device.width > device.height ? 90 : 0}
     }, sessionId);
-    await cdp.send('Emulation.setTouchEmulationEnabled', {enabled:device.mobile, maxTouchPoints:device.mobile ? 5 : 1}, sessionId);
+    // Fresh desktop targets already have mouse capabilities. Sending a false
+    // touch override restores headless embedder defaults and disables CSS hover.
+    if(device.mobile)await cdp.send('Emulation.setTouchEmulationEnabled', {enabled:true, maxTouchPoints:5}, sessionId);
     {
       const result = await cdp.send('Page.navigate', {url:device.url}, sessionId);
       if (result.errorText) throw new Error('Cannot load website: ' + result.errorText);
 
     }
     await cdp.send('Emulation.setFocusEmulationEnabled',{enabled:true},sessionId);
-    await cdp.send('Emulation.setTouchEmulationEnabled', {enabled:device.mobile, maxTouchPoints:device.mobile ? 5 : 1}, sessionId);
+    if(device.mobile)await cdp.send('Emulation.setTouchEmulationEnabled', {enabled:true, maxTouchPoints:5}, sessionId);
     const viewerUrl = host.register(targetId,sessionId,device,linked);
     host.setLinked(linked,linker.reason);
     if(rtcEnabled)await resizeCapture(targetId).catch(()=>{});
@@ -245,7 +249,7 @@ async function serve(state, headless) {
       const child=spawn(browserExecutable(),[
         '--user-data-dir='+browserProfile,'--remote-debugging-address=127.0.0.1','--remote-debugging-port=0',
         '--no-first-run','--no-default-browser-check','--disable-session-crashed-bubble',
-        '--class=screenhop','--no-startup-window',...(browserProfile===profile?['--auto-accept-this-tab-capture']:[]),...(runHeadless?['--headless=new']:[])
+        '--class=screenhop','--no-startup-window',...(browserProfile===profile?['--auto-accept-this-tab-capture']:[]),...(runHeadless?['--headless=new','--blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4']:[])
       ],{detached:true,stdio:['ignore',log,log]});
       closeSync(log); child.unref(); let failure; child.on('error',error=>{failure=error});
       for(let i=0;i<100&&!url;i++){if(failure)throw failure;await delay(100);url=await endpoint(browserProfile)}
@@ -253,11 +257,13 @@ async function serve(state, headless) {
     }
     return CDP.connect(url);
   }
+  let resizeNow,resizeLater;
   function resizeAllCaptures() {
     // Chromium's shared capture indicator changes chrome in OTHER source
     // windows too. Restore every device's content size when capture changes.
     const resize=()=>{for(const id of captureWindows.keys())resizeCapture(id).catch(()=>{});};
-    resize();setTimeout(resize,150);
+    if(!resizeNow)resizeNow=setTimeout(()=>{resizeNow=null;resize();},0);
+    clearTimeout(resizeLater);resizeLater=setTimeout(resize,150);
   }
   async function resizeCapture(id) {
     const record=host?.records.get(id);if(!record)return;
@@ -277,10 +283,23 @@ async function serve(state, headless) {
       if(Date.now()-(record.lastCaptureResize||0)>200){record.lastCaptureResize=Date.now();await resizeCapture(id);}
       return;
     }
-    if(message.type==='fallback'){
-      const contextId=contexts.get(record.sessionId);
-      if(contextId)await cdp.send('Runtime.evaluate',{expression:'globalThis.screenhopRTC?.signal('+JSON.stringify({type:'close',peerId:message.peerId})+')',contextId,awaitPromise:true},record.sessionId).catch(()=>{});
-      resizeAllCaptures();await startJpeg(id);return;
+    if(['fallback','ready','close'].includes(message.type)) {
+      record.jpegPeers ||= new Set();
+      if(message.type==='fallback')record.jpegPeers.add(message.peerId);else record.jpegPeers.delete(message.peerId);
+      record.jpegQueue=(record.jpegQueue||Promise.resolve()).catch(()=>{}).then(async()=>{
+        if(record.jpegPeers.size)await startJpeg(id);
+        else if(rtcEnabled&&jpegSessions.has(record.sessionId)){
+          await cdp.send('Page.stopScreencast',{},record.sessionId);
+          jpegSessions.delete(record.sessionId);frameDeadlines.delete(record.sessionId);record.frame=null;
+        }
+      });
+      await record.jpegQueue;
+      if(message.type==='ready')return;
+      if(message.type==='fallback'||message.type==='close'){
+        const contextId=contexts.get(record.sessionId);
+        if(contextId)await cdp.send('Runtime.evaluate',{expression:'globalThis.screenhopRTC?.signal('+JSON.stringify({type:'close',peerId:message.peerId})+')',contextId,awaitPromise:true},record.sessionId).catch(()=>{});
+        resizeAllCaptures();return;
+      }
     }
     const contextId=contexts.get(record.sessionId);if(!contextId)throw new Error('Preview is navigating; retry shortly');
     const result=await cdp.send('Runtime.evaluate',{expression:'globalThis.screenhopRTC.signal('+JSON.stringify(message)+')',contextId,userGesture:true,awaitPromise:true,returnByValue:true},record.sessionId);
@@ -366,10 +385,10 @@ async function serve(state, headless) {
             if(request.phone==='off'){await phoneRemote?.close();phoneRemote=undefined;}
             else if(request.phone==='on'){
               if(!host||!sessions.size)throw new Error('Open a framed preview before enabling Phone remote.');
-              if(!phoneRemote){const {PhoneRemote}=await import('./phone-remote.mjs');phoneRemote=await PhoneRemote.create({host});}
+              if(!phoneRemote){const {PhoneRemote}=await import('./phone-remote.mjs');phoneRemote=await PhoneRemote.create({host,...(process.env.SCREENHOP_TEST_PHONE_PORT==='0'?{port:0}:{})});}
             }else throw new Error('Use --phone on or --phone off.');
           }
-          const result = (request.phone!==undefined||request['phone-status']) ? {status:'phone',...(phoneRemote?phoneRemote.info():{enabled:false,url:'',urls:[],qrData:''})} : request.status ? {status:'state',enabled:linked,reason:linker.reason,previewCount:sessions.size} : request.link !== undefined ? {status:'linked', enabled:linked, reason:linker.reason} : request.ping ? {status:'ok',protocol:6} : request.close ? await closePreview() : request.inspect ? await inspectPreview(request.targetId) : await preview(request);
+          const result = request.snapshot ? {status:'snapshot',previews:[...host?.records.values()||[]].map(record=>({targetId:record.id,device:record.device.id,url:record.url,width:record.device.width,height:record.device.height,dpr:record.device.dpr,mobile:record.device.mobile,landscape:record.device.id!=='custom' && devices.find(d=>d.id===record.device.id)?.width!==record.device.width}))} : request.capture ? await screenshot(request.capture,request.skin===true) : (request.phone!==undefined||request['phone-status']) ? {status:'phone',...(phoneRemote?phoneRemote.info():{enabled:false,url:'',urls:[],qrData:''})} : request.status ? {status:'state',build:loadedBuild,protocol:7,enabled:linked,reason:linker.reason,previewCount:sessions.size} : request.link !== undefined ? {status:'linked', enabled:linked, reason:linker.reason} : request.ping ? {status:'ok',protocol:7,build:loadedBuild} : request.close ? await closePreview() : request.inspect ? await inspectPreview(request.targetId) : await preview(request);
           client.end(JSON.stringify(result) + '\n');
         } catch (error) { client.end(JSON.stringify({status:'error', error:error.message}) + '\n'); }
       });
@@ -381,7 +400,7 @@ async function serve(state, headless) {
     const result = await cdp.send('Runtime.evaluate', {
       expression:'({width:innerWidth,height:innerHeight,dpr:devicePixelRatio,touch:navigator.maxTouchPoints,phone:matchMedia("(max-width:500px)").matches,url:location.href})', returnByValue:true
     }, sessionId);
-    return result.result.value;
+    return {...result.result.value,jpegActive:jpegSessions.has(sessionId),fallbackPeerCount:host?.records.get(targetId)?.jpegPeers?.size || 0};
   }
   async function closePreview() {
     viewerTargets.clear();
@@ -427,7 +446,7 @@ async function main() {
   const socket = join(state, 'controller.sock'); let response;
   try {
     const running=await rpc(socket,{ping:true});
-    if(running.protocol!==6&&!opts.close)throw new Error('ScreenHop was updated. Save your work, close all ScreenHop previews, wait 35 seconds, then reopen them to activate the update.');
+    if(running.protocol!==7&&!opts.close)throw new Error('ScreenHop was updated. Save your work, close all ScreenHop previews, wait 35 seconds, then reopen them to activate the update.');
     response = await rpc(socket, opts);
   } catch (error) {
     if (!['ENOENT','ECONNREFUSED'].includes(error.code)) throw error;

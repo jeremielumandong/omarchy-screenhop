@@ -1,12 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {request,createServer} from 'node:http';
+import {PreviewHost} from '../preview-host.mjs';
 import {PhoneRemote} from '../phone-remote.mjs';
 
 async function fixture(t){
   const calls=[];
   const record={id:'abc123',device:{name:'<script>alert(1)</script>',width:390,height:844},url:'https://example.test',linked:false,streams:new Set(),frame:'test-frame'};
   const host={token:'DESKTOP-SECRET',template:'<script>const config=__SCREENHOP_CONFIG__;</script>',records:new Map([[record.id,record]]),input:async(id,data)=>calls.push({id,data}),action:async(id,data)=>calls.push({id,data})};
+  host.subscribe=PreviewHost.prototype.subscribe;
   const remote=await PhoneRemote.create({host,port:0,networkInterfaces:()=>({lo:[{family:'IPv4',address:'127.0.0.1',internal:true}]})});
   t.after(()=>remote.close());
   const url=remote.info().url;

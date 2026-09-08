@@ -51,7 +51,7 @@ export class LinkedPreviews {
       if(!canSyncNavigation(this.urls.get(session),data.url)){this.pause('Sign-in and external navigation stay in this preview.');return;}
       this.pending.set(session,{url:data.url,origin:this.urls.get(session),started:Date.now()});return;
     }
-    if(!['click','input','scroll'].includes(data.kind))return;
+    if(!['click','input','scroll','theme'].includes(data.kind))return;
     const generation=this.generation;
     this.queue=this.queue.then(async()=>{
       for(const destination of this.sessions.values()) {

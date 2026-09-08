@@ -40,15 +40,26 @@ body{display:block}.stage{width:100%;height:100%;padding:68px 24px;background:ra
 
 .capture-tools{padding-top:9px;border-top:1px solid #ffffff12;display:flex;flex-direction:column;gap:8px}.capture-option{display:flex;align-items:center;gap:7px;font-size:11px;color:#c7ceda}.capture-option input{accent-color:#abc6ff;width:14px;height:14px;margin:0}.capture-actions{display:flex;gap:7px}.capture-actions button{flex:1;padding:8px;border:1px solid #ffffff19;border-radius:8px;font-size:11px}.capture-actions button[aria-pressed=true]{color:#ffc4c4;background:#ff7e7e12;border-color:#ff999944}.capture-hint{font-size:10px;line-height:1.5;color:#9099a9;margin:0}.recording-status{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);z-index:12;display:flex;gap:9px;align-items:center;height:38px;padding:5px 7px 5px 11px;background:#292b32f5;border:1px solid #ed929240;border-radius:9px;box-shadow:0 4px 18px #0005;font-size:11px;font-variant-numeric:tabular-nums}.recording-status[hidden]{display:none}.recording-status .record-dot{width:6px;height:6px;border-radius:50%;background:#fa9696}.recording-status button{padding:5px 8px;min-height:27px;border-radius:6px;background:#ffffff0b;font-size:11px}.capture-region{position:absolute;inset:-12px;pointer-events:none}.capture-download{display:none}
 .recording-skin #toast,.recording-skin #phone-keyboard-panel,.recording-skin .floating-tools{visibility:hidden!important;pointer-events:none!important}
+.performance-tools{border-top:1px solid #ffffff12;padding-top:8px;font-size:11px}.performance-tools select{background:#30333b;color:inherit;border:1px solid #ffffff25;border-radius:5px;padding:4px}.performance-tools summary{cursor:pointer;margin-top:8px}.performance-tools pre{white-space:pre-wrap;font:10px/1.6 system-ui;color:#b4bed0;margin-bottom:0}.link-state{font-size:10px;color:#b4bed0;line-height:1.5}.floating-tools{max-height:calc(100dvh - 70px);overflow:auto}
+.touch-preview{cursor:none}.touch-indicator{position:absolute;width:26px;height:26px;border:1.5px solid #fff9;border-radius:50%;background:#ffffff25;box-shadow:0 0 0 1px #0005;transform:translate(-50%,-50%);pointer-events:none;z-index:4}.touch-indicator.pressed{background:#ffffff66;border-color:white}.touch-indicator[hidden]{display:none}
+
+/* Supplied manufacturer artwork is decoration around the unchanged CSS viewport. */
+.device.asset-skin:not(.bare){display:block;padding:0;width:var(--asset-width);height:var(--asset-height);border-radius:0;background:none;box-shadow:none;--stand-height:0px}
+.asset-skin::before,.asset-skin::after,.asset-skin .hardware-top,.asset-skin .hardware-bottom{display:none!important}
+.asset-art,.asset-mask{position:absolute;pointer-events:none;user-select:none;transform-origin:top left}
+.asset-art{left:0;top:0;overflow:hidden;z-index:0}.asset-art img{position:absolute;max-width:none;pointer-events:none}.asset-mask{z-index:3;max-width:none}
+.asset-skin:not(.bare) .screen{position:absolute;left:var(--asset-screen-left);top:var(--asset-screen-top);z-index:1}
+.asset-skin.bare{height:calc(var(--h)*1px)}.asset-skin.bare .asset-art,.asset-skin.bare .asset-mask{display:none}
+.skin-color-option{display:flex;align-items:center;gap:9px;font-size:11px}.skin-color-option[hidden]{display:none}.skin-color-option select{font:inherit;color:inherit;background:#292c34;border:1px solid #ffffff24;padding:5px;border-radius:5px}
 </style>
 </head>
 <body>
 <div hidden><strong id="device-name"></strong><span id="dimensions"></span></div>
 <aside class="tool-dock" aria-label="Preview tools">
  <button id="tools-toggle" class="tools-toggle" aria-expanded="false" aria-controls="floating-tools" aria-label="Show preview controls" title="Preview controls"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>
- <div id="floating-tools" class="floating-tools"><nav class="navigation" aria-label="Preview navigation"><button class="icon-button" data-action="back" aria-label="Back" title="Back"><svg viewBox="0 0 24 24"><path d="m13 6-6 6 6 6M7 12h12"/></svg></button><button class="icon-button" data-action="forward" aria-label="Forward" title="Forward"><svg viewBox="0 0 24 24"><path d="m11 6 6 6-6 6M5 12h12"/></svg></button><button class="icon-button" data-action="reload" aria-label="Reload preview" title="Reload preview"><svg viewBox="0 0 24 24"><path d="M20 10a8 8 0 1 0-2 8M20 4v6h-6"/></svg></button><div class="url" id="url"></div><div id="status" class="status" role="status" data-state="connecting"><span class="dot"></span><span id="status-text">Connecting</span></div></nav><div class="controls"><button id="link" class="pill" aria-pressed="false" title="Synchronize clicks, typing, navigation, and scrolling between previews" aria-label="Link previews"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10 13 4-4m-6 7-1 1a4 4 0 0 1-6-6l4-4a4 4 0 0 1 6 0m2 2 1-1a4 4 0 0 1 6 6l-4 4a4 4 0 0 1-6 0" transform="translate(1 0)"/></svg><span class="button-label">Link previews</span></button><button id="frame" class="pill" aria-pressed="true" title="Show device frame" aria-label="Show device frame"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M10 5h4m-3 14h2"/></svg><span class="button-label">Frame</span></button></div><section class="capture-tools" aria-label="Save preview"><label class="capture-option"><input id="capture-skin" type="checkbox" checked>Include device frame</label><div class="capture-actions"><button id="capture-screenshot" type="button" disabled>Screenshot</button><button id="capture-record" type="button" aria-pressed="false" disabled>Record</button></div><p id="capture-hint" class="capture-hint">PNG screenshots · silent video recordings up to 3 minutes.</p></section></div>
+ <div id="floating-tools" class="floating-tools"><nav class="navigation" aria-label="Preview navigation"><button class="icon-button" data-action="back" aria-label="Back" title="Back"><svg viewBox="0 0 24 24"><path d="m13 6-6 6 6 6M7 12h12"/></svg></button><button class="icon-button" data-action="forward" aria-label="Forward" title="Forward"><svg viewBox="0 0 24 24"><path d="m11 6 6 6-6 6M5 12h12"/></svg></button><button class="icon-button" data-action="reload" aria-label="Reload preview" title="Reload preview"><svg viewBox="0 0 24 24"><path d="M20 10a8 8 0 1 0-2 8M20 4v6h-6"/></svg></button><div class="url" id="url"></div><div id="status" class="status" role="status" data-state="connecting"><span class="dot"></span><span id="status-text">Connecting</span></div></nav><div class="controls"><button id="link" class="pill" aria-pressed="false" title="Synchronize clicks, typing, navigation, and scrolling between previews" aria-label="Link previews"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10 13 4-4m-6 7-1 1a4 4 0 0 1-6-6l4-4a4 4 0 0 1 6 0m2 2 1-1a4 4 0 0 1 6 6l-4 4a4 4 0 0 1-6 0" transform="translate(1 0)"/></svg><span class="button-label">Link previews</span></button><button id="frame" class="pill" aria-pressed="true" title="Show device frame" aria-label="Show device frame"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M10 5h4m-3 14h2"/></svg><span class="button-label">Frame</span></button></div><p id="link-state" class="link-state"></p><section class="performance-tools"><label for="preview-quality">Performance </label><select id="preview-quality"><option value="auto">Auto</option><option value="eco">Eco</option><option value="smooth">Smooth</option></select><details id="diagnostics"><summary>Preview diagnostics</summary><pre id="diagnostic-values"></pre></details></section><label class="skin-color-option" id="skin-color-option" hidden>Device color <select id="skin-color" aria-label="Device color"></select></label><section class="capture-tools" aria-label="Save preview"><label class="capture-option"><input id="capture-skin" type="checkbox" checked>Include device frame</label><div class="capture-actions"><button id="capture-screenshot" type="button" disabled>Screenshot</button><button id="capture-record" type="button" aria-pressed="false" disabled>Record</button></div><p id="capture-hint" class="capture-hint">PNG screenshots · silent video recordings up to 3 minutes.</p></section></div>
 </aside>
-<main class="stage" id="stage"><div class="preview-group"><div class="preview-label"><strong id="preview-name"></strong><span id="preview-size"></span></div><div class="fit-box" id="fit-box"><div class="capture-region" id="capture-region" aria-hidden="true"></div><div class="device" id="device"><div class="hardware-top" aria-hidden="true"><span class="clock">9:41</span><span class="camera"></span><span class="system-icons"><svg viewBox="0 0 20 20"><path d="M2 15v-2m4 2v-5m4 5V7m4 8V4"/></svg><svg viewBox="0 0 20 20"><path d="M2 7a12 12 0 0 1 16 0M5 10a8 8 0 0 1 10 0m-7 3a3 3 0 0 1 4 0m-2 3h.01"/></svg><svg viewBox="0 0 22 20"><rect x="1" y="5" width="16" height="10" rx="2"/><path d="M20 8v4M4 8h10v4H4z"/></svg></span></div><div class="screen" id="screen" tabindex="0" role="application" aria-label="Interactive device preview. Click to focus; keyboard and pointer input control the website."><img id="display" alt="Live website preview" draggable="false"><video id="rtc-video" class="rtc-video" autoplay muted playsinline aria-label="Live website video"></video><div class="loading" id="loading">Connecting to your preview…</div></div><div class="hardware-bottom" aria-hidden="true"></div></div></div></div><div class="toast" id="toast" role="alert" hidden></div></main>
+<main class="stage" id="stage"><div class="preview-group"><div class="preview-label"><strong id="preview-name"></strong><span id="preview-size"></span></div><div class="fit-box" id="fit-box"><div class="capture-region" id="capture-region" aria-hidden="true"></div><div class="device" id="device"><div class="hardware-top" aria-hidden="true"><span class="clock">9:41</span><span class="camera"></span><span class="system-icons"><svg viewBox="0 0 20 20"><path d="M2 15v-2m4 2v-5m4 5V7m4 8V4"/></svg><svg viewBox="0 0 20 20"><path d="M2 7a12 12 0 0 1 16 0M5 10a8 8 0 0 1 10 0m-7 3a3 3 0 0 1 4 0m-2 3h.01"/></svg><svg viewBox="0 0 22 20"><rect x="1" y="5" width="16" height="10" rx="2"/><path d="M20 8v4M4 8h10v4H4z"/></svg></span></div><div class="screen" id="screen" tabindex="0" role="application" aria-label="Interactive device preview. Click to focus; keyboard and pointer input control the website."><span id="touch-indicator" class="touch-indicator" hidden aria-hidden="true"></span><img id="display" alt="Live website preview" draggable="false"><video id="rtc-video" class="rtc-video" autoplay muted playsinline aria-label="Live website video"></video><div class="loading" id="loading">Connecting to your preview…</div></div><div class="hardware-bottom" aria-hidden="true"></div></div></div></div><div class="toast" id="toast" role="alert" hidden></div></main>
 <footer class="footer"><span id="footer-device"></span><span class="separator">·</span><span id="scale"></span><span class="separator">·</span><span>ScreenHop 1.0.0</span></footer>
 <div id="recording-status" class="recording-status" role="status" hidden><span class="record-dot" aria-hidden="true"></span><span id="recording-time">00:00</span><button id="capture-stop" type="button" aria-label="Stop recording and save video">Stop</button></div>
 <section class="phone-keyboard" aria-label="Phone keyboard controls">
@@ -58,10 +69,13 @@ body{display:block}.stage{width:100%;height:100%;padding:68px 24px;background:ra
 <script>
 'use strict';
 const config = __SCREENHOP_CONFIG__;
-const phone = config.phone === true;
+const phone = config.phone === true, mobileInput = config.mobile === true;
 document.body.classList.toggle('phone', phone);
 const $ = id => document.getElementById(id);
 const screen = $('screen'), display = $('display'), device = $('device');
+screen.classList.toggle('touch-preview',mobileInput);
+const touchIndicator = $('touch-indicator');
+function indicateTouch(event,pressed = capturedPointer !== null) { if (!mobileInput) return; const p = point(event); touchIndicator.style.left = p.x + 'px'; touchIndicator.style.top = p.y + 'px'; touchIndicator.hidden = false; touchIndicator.classList.toggle('pressed',pressed); }
 const width = Number(config.width), height = Number(config.height);
 device.style.setProperty('--w', width); device.style.setProperty('--h', height);
 const name = String(config.name || 'Custom device');
@@ -74,12 +88,44 @@ const style = skin.startsWith('iphone-') ? 'iphone' : skin === 'foldable' ? 'tab
 device.classList.add(style,'skin-' + skin);
 device.dataset.skin = skin;
 device.classList.toggle('landscape',width > height && ['iphone-notch','iphone-island','iphone-classic','android','tablet','foldable'].includes(skin));
+
+// A panel may already be wide (foldable main display); rotate only when its
+// aspect differs from the selected viewport, never merely because width > height.
+const asset = config.skinAsset;
+if (asset?.crop && asset.colors?.length && /^[a-z0-9_-]+$/i.test(asset.id)) {
+ const c = asset.crop, rotated = Math.abs(width / height - asset.screenWidth / asset.screenHeight) > Math.abs(width / height - asset.screenHeight / asset.screenWidth);
+ const sx = width / (rotated ? asset.screenHeight : asset.screenWidth), sy = height / (rotated ? asset.screenWidth : asset.screenHeight);
+ const outerW = (rotated ? c.height : c.width) * sx, outerH = (rotated ? c.width : c.height) * sy;
+ const left = (rotated ? c.height - (asset.screenY - c.y) - asset.screenHeight : asset.screenX - c.x) * sx;
+ const top = (rotated ? asset.screenX - c.x : asset.screenY - c.y) * sy;
+ device.classList.add('asset-skin');
+ for (const [key,value] of Object.entries({'width':outerW,'height':outerH,'screen-left':left,'screen-top':top})) device.style.setProperty('--asset-' + key,value + 'px');
+ const art = document.createElement('div'); art.className = 'asset-art'; art.setAttribute('aria-hidden','true');
+ const ax = rotated ? sy : sx, ay = rotated ? sx : sy;
+ Object.assign(art.style,{width:c.width*ax+'px',height:c.height*ay+'px',borderRadius:(Array.isArray(c.radii)&&c.radii.length===4?c.radii:[c.radius||0]).map(radius=>Number(radius)*Math.min(ax,ay)+'px').join(' '),transform:rotated ? `translateX(${outerW}px) rotate(90deg)` : ''});
+ const background = document.createElement('img'); background.alt = ''; background.draggable = false;
+ Object.assign(background.style,{width:asset.canvasWidth*ax+'px',height:asset.canvasHeight*ay+'px',left:-c.x*ax+'px',top:-c.y*ay+'px'}); art.append(background); device.prepend(art);
+ const source = file => config.base + '/skin/' + encodeURIComponent(asset.id) + '/' + encodeURIComponent(file);
+ const select = $('skin-color');
+ for (const color of asset.colors) {const option=document.createElement('option');option.value=color.file;option.textContent=color.name;select.append(option);}
+ select.value = asset.colors.some(color=>color.file===asset.defaultColor) ? asset.defaultColor : asset.colors[0].file;
+ const colorKey = 'screenhop.skin-color.' + asset.id;
+ try { const saved=localStorage.getItem(colorKey);if(asset.colors.some(color=>color.file===saved))select.value=saved; } catch {}
+ function loadColor(){background.src=source(select.value);}
+ select.addEventListener('change',()=>{loadColor();try{localStorage.setItem(colorKey,select.value)}catch{}});loadColor();
+ $('skin-color-option').hidden = asset.colors.length < 2;
+ if(asset.foreground){const mask=document.createElement('img');mask.className='asset-mask';mask.alt='';mask.draggable=false;mask.setAttribute('aria-hidden','true');mask.src=source(asset.foreground);
+ Object.assign(mask.style,{left:(left+(rotated?width:0))+'px',top:top+'px',width:(rotated?height:width)+'px',height:(rotated?width:height)+'px',transform:rotated?'rotate(90deg)':''});device.append(mask);}
+}
+
 document.title = `ScreenHop • ${name} • ${width}×${height}`;
 $('device-name').textContent = name;
 $('dimensions').textContent = `${width} × ${height} CSS px · ${config.dpr || 1}× pixel density`;
 $('footer-device').textContent = name;
 $('preview-name').textContent = name;
 $('preview-size').textContent = `${width} × ${height} CSS px`;
+const clientId = globalThis.crypto?.randomUUID?.() || ('viewer-' + Date.now().toString(36) + Math.random().toString(36).slice(2));
+let linkReason = config.reason || '';
 let linked = Boolean(config.linked), showFrame = true, connected = false, toastTimer;
 try { showFrame = localStorage.getItem('screenhop.frame') !== 'off'; } catch {}
 function fit() {
@@ -95,23 +141,27 @@ function fit() {
 }
 function updateFrame() { device.classList.toggle('bare', !showFrame); $('frame').setAttribute('aria-pressed', String(showFrame)); fit(); }
 function updateState(state) {
+ if ('reason' in state) linkReason = state.reason || '';
  if (state.reason) { $('url').title = state.reason; $('status-text').textContent = 'Linking paused'; toast(state.reason); }
  if (typeof state.url === 'string') { $('url').textContent = state.url; $('url').title = state.url; }
  if (typeof state.linked === 'boolean') linked = state.linked;
  $('link').setAttribute('aria-pressed', String(linked));
+ $('link-state').textContent = linkReason ? 'Linking paused: ' + linkReason : linked ? 'Linked · actions synchronize with other linked previews' : 'Independent preview · linking off';
 }
 function status(state, message) { connected = state === 'live'; $('status').dataset.state = state; $('status-text').textContent = message; }
 function toast(message) { $('toast').textContent = message; $('toast').hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { $('toast').hidden = true; }, 4500); }
 async function post(route, data, timeout = 5000) {
- const response = await fetch(config.base + route, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data),keepalive:route === '/signal' && data.type === 'close',signal:AbortSignal.timeout(timeout)});
+ if (route === '/signal') data = {...data,clientId};
+ const response = await fetch(config.base + route, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data),keepalive:(route === '/signal' && data.type === 'close') || (route === '/input' && data.type === 'touchCancel'),signal:AbortSignal.timeout(timeout)});
  if (!response.ok) throw new Error(`Preview request failed (${response.status})`);
 }
 // One request in flight; combine only adjacent continuous gestures, never across clicks or keys.
 const inputQueue = [], remoteKeys = new Map(), remoteButtons = new Map();
 const maxPendingInputs = 128;
-let sendingInput = false, recoveringInput = false;
-function continuous(data) { return data.kind === 'wheel' || (data.kind === 'mouse' && data.type === 'mouseMoved'); }
+let sendingInput = false, recoveringInput = false, remoteTouch = false;
+function continuous(data) { return (data.kind === 'touch' && data.type === 'touchMove') || data.kind === 'wheel' || (data.kind === 'mouse' && data.type === 'mouseMoved'); }
 function rememberRemoteInput(data) {
+ if (data.kind === 'touch') remoteTouch = data.type === 'touchStart' || data.type === 'touchMove';
  if (data.kind === 'key') {
   if (data.type === 'keyDown') remoteKeys.set(data.code,{key:data.key,code:data.code,keyCode:data.keyCode});
   else if (data.type === 'keyUp') remoteKeys.delete(data.code);
@@ -124,10 +174,12 @@ function rememberRemoteInput(data) {
 function recoverInput(message) {
  inputQueue.length = 0;
  recoveringInput = true;
+ if (mobileInput) { const pointer = capturedPointer; capturedPointer = null; movePending = null; touchIndicator.hidden = true; if (pointer !== null && screen.hasPointerCapture(pointer)) screen.releasePointerCapture(pointer); }
  // Releases are safe even if the timed-out press never reached the target.
  for (const key of remoteKeys.values()) inputQueue.push({data:{kind:'key',type:'keyUp',...key,modifiers:0},recovery:true});
  for (const [button,point] of remoteButtons) inputQueue.push({data:{kind:'mouse',type:'mouseReleased',...point,button,buttons:0,clickCount:1,modifiers:0},recovery:true});
- remoteKeys.clear(); remoteButtons.clear();
+ if (remoteTouch) inputQueue.push({data:{kind:'touch',type:'touchCancel'},recovery:true});
+ remoteTouch = false; remoteKeys.clear(); remoteButtons.clear();
  toast(message);
 }
 async function drainInput() {
@@ -146,11 +198,12 @@ async function drainInput() {
  } finally { sendingInput = false; recoveringInput = false; }
 }
 function input(data) {
+ markActivity();
  if (!connected || recoveringInput) return;
  const last = inputQueue.at(-1);
  if (last && !last.recovery && continuous(data) && data.kind === last.data.kind && data.modifiers === last.data.modifiers && data.buttons === last.data.buttons) {
   if (data.kind === 'wheel') last.data = {...data,deltaX:last.data.deltaX + data.deltaX,deltaY:last.data.deltaY + data.deltaY};
-  else if (last.data.type === 'mouseMoved') last.data = data;
+  else if (last.data.type === 'mouseMoved' || last.data.type === 'touchMove') last.data = data;
   else inputQueue.push({data});
  } else inputQueue.push({data});
  if (inputQueue.length > maxPendingInputs) {
@@ -160,7 +213,7 @@ function input(data) {
  }
  void drainInput();
 }
-async function action(data) { try { await post('/action', data); } catch(error) { toast(error.message); } }
+async function action(data) { markActivity(); try { await post('/action', data); } catch(error) { toast(error.message); } }
 document.querySelectorAll('[data-action]').forEach(button => button.addEventListener('click', () => action({action:button.dataset.action})));
 $('tools-toggle').addEventListener('click', () => { const opened = document.querySelector('.tool-dock').classList.toggle('open'); $('tools-toggle').setAttribute('aria-expanded',String(opened)); });
 document.addEventListener('pointerdown', event => { if (!event.target.closest('.tool-dock')) { document.querySelector('.tool-dock').classList.remove('open'); $('tools-toggle').setAttribute('aria-expanded','false'); } },true);
@@ -173,18 +226,20 @@ const buttonName = index => ['left','middle','right'][index] || 'none';
 let touchGesture = null;
 let clickCount = 1, previousClick = {time:0,x:0,y:0,button:-1}, capturedPointer = null, lastPoint = {x:0,y:0}, heldButton = 'left';
 screen.addEventListener('pointerdown', event => {
- if (capturedPointer !== null) return;
+ if (capturedPointer !== null || (mobileInput && event.button !== 0)) return;
  event.preventDefault(); screen.focus({preventScroll:true});
  const p = point(event), now = performance.now();
  clickCount = now - previousClick.time < 450 && Math.hypot(p.x - previousClick.x,p.y - previousClick.y) < 5 && event.button === previousClick.button ? Math.min(clickCount + 1,3) : 1;
  previousClick = {...p,time:now,button:event.button}; capturedPointer = event.pointerId; lastPoint = p; heldButton = buttonName(event.button);
  screen.setPointerCapture(event.pointerId);
+ if (mobileInput) { indicateTouch(event,true); input({kind:'touch',type:'touchStart',...p,modifiers:modifiers(event)}); return; }
  if (phone && event.pointerType === 'touch') { touchGesture = {startX:event.clientX,startY:event.clientY,lastX:event.clientX,lastY:event.clientY,swiping:false}; return; }
  input({kind:'mouse',type:'mousePressed',...p,button:heldButton,buttons:event.buttons,clickCount,modifiers:modifiers(event)});
 });
 let movePending = null, moveScheduled = false;
 function flushMove() { if (movePending) { input(movePending); movePending = null; } }
 screen.addEventListener('pointermove', event => {
+ if (mobileInput) { indicateTouch(event); if (event.pointerId !== capturedPointer) return; lastPoint = point(event); movePending = {kind:'touch',type:'touchMove',...lastPoint,modifiers:modifiers(event)}; if (!moveScheduled) { moveScheduled = true; requestAnimationFrame(() => { moveScheduled = false; flushMove(); }); } return; }
  if (touchGesture) {
   if (event.pointerId !== capturedPointer) return;
   const gesture = touchGesture, rect = screen.getBoundingClientRect();
@@ -196,8 +251,10 @@ screen.addEventListener('pointermove', event => {
  movePending = {kind:'mouse',type:'mouseMoved',...lastPoint,button:event.buttons ? heldButton:'none',buttons:event.buttons,clickCount:0,modifiers:modifiers(event)};
  if (!moveScheduled) { moveScheduled = true; requestAnimationFrame(() => { moveScheduled = false; flushMove(); }); }
 });
+screen.addEventListener('pointerleave', () => { touchIndicator.hidden = true; if (mobileInput) return; if (capturedPointer === null) { movePending = null; input({kind:'pointerleave'}); } });
 screen.addEventListener('pointerup', event => {
  if (capturedPointer !== event.pointerId) return;
+ if (mobileInput) { flushMove(); input({kind:'touch',type:'touchEnd'}); capturedPointer = null; screen.releasePointerCapture(event.pointerId); indicateTouch(event,false); if(event.pointerType === 'touch') touchIndicator.hidden = true; return; }
  if (touchGesture) {
   if (!touchGesture.swiping) { const p = point(event); input({kind:'mouse',type:'mousePressed',...p,button:'left',buttons:1,clickCount,modifiers:0}); input({kind:'mouse',type:'mouseReleased',...p,button:'left',buttons:0,clickCount,modifiers:0}); }
   touchGesture = null; capturedPointer = null; screen.releasePointerCapture(event.pointerId); return;
@@ -205,7 +262,7 @@ screen.addEventListener('pointerup', event => {
  flushMove(); input({kind:'mouse',type:'mouseReleased',...point(event),button:heldButton,buttons:event.buttons,clickCount,modifiers:modifiers(event)});
  capturedPointer = null; screen.releasePointerCapture(event.pointerId);
 });
-function releasePointer() { if (touchGesture) { touchGesture = null; capturedPointer = null; return; } if (capturedPointer !== null) { input({kind:'mouse',type:'mouseReleased',...lastPoint,button:heldButton,buttons:0,clickCount:1,modifiers:0}); capturedPointer = null; } }
+function releasePointer() { if (mobileInput) { movePending = null; if (capturedPointer !== null) input({kind:'touch',type:'touchCancel'}); capturedPointer = null; touchIndicator.hidden = true; return; } if (touchGesture) { touchGesture = null; capturedPointer = null; return; } if (capturedPointer !== null) { input({kind:'mouse',type:'mouseReleased',...lastPoint,button:heldButton,buttons:0,clickCount:1,modifiers:0}); capturedPointer = null; } }
 screen.addEventListener('pointercancel', releasePointer);
 screen.addEventListener('lostpointercapture', releasePointer);
 screen.addEventListener('contextmenu', event => event.preventDefault());
@@ -279,7 +336,7 @@ function closeRTC(notify = true) {
 }
 function fallbackRTC(message, generation = rtcGeneration) {
  if (generation !== rtcGeneration || rtcMode === 'jpeg') return;
- const previousId = rtcPeerId || 'fallback';
+ const previousId = rtcPeerId || clientId;
  closeRTC(false); rtcMode = 'jpeg';
  // The host only enables JPEG work when a receiver explicitly needs fallback.
  void post('/signal',{type:'fallback',peerId:previousId}).catch(error => toast(error.message));
@@ -319,6 +376,7 @@ async function startRTC() {
     rtcVideo.geometryTimer=setTimeout(ready,400);return;
    }
    geometryAttempts=0;
+   if (rtcMode !== 'webrtc') void sendRTC({type:'ready',peerId},generation).then(() => reportActivity(true)).catch(() => {});
    clearTimeout(rtcTimer); rtcMode = 'webrtc'; screen.classList.add('rtc-live','has-frame'); status('live','Live · WebRTC');
   };
   rtcVideo.onresize=ready;
@@ -352,13 +410,56 @@ function acceptRTCSignal(message) {
   } else if (message.type === 'error') fallbackRTC('Using compatibility preview for this website.',generation);
  }).catch(() => fallbackRTC('',generation));
 }
-const events = new EventSource(config.base + '/events');
+let viewerLeaving = false;
+let quality = 'auto', lastActivity = performance.now(), activityTimer, lastDemand = '', recordingActive = false;
+try { const saved = localStorage.getItem('screenhop.quality'); if (['auto','eco','smooth'].includes(saved)) quality = saved; } catch {}
+$('preview-quality').value = quality;
+function activityDemand() {
+ const visible = !document.hidden, active = performance.now() - lastActivity < 3000;
+ const fps = recordingActive ? 30 : !visible ? (quality === 'smooth' ? 5 : quality === 'eco' ? 1 : 2) : active || quality === 'smooth' ? 30 : quality === 'eco' ? 5 : 10;
+ return {visible,active,fps};
+}
+function reportActivity(force = false) {
+ if (viewerLeaving) return;
+ clearTimeout(activityTimer);
+ const demand = activityDemand(), key = JSON.stringify(demand);
+ if (rtcPeerId && (force || key !== lastDemand)) { lastDemand = key; void sendRTC({type:'activity',peerId:rtcPeerId,...demand}).catch(() => { lastDemand = ''; }); }
+ if (demand.active && !document.hidden) activityTimer = setTimeout(reportActivity,3100);
+}
+function markActivity() { lastActivity = performance.now(); reportActivity(); }
+$('preview-quality').addEventListener('change', () => { quality = $('preview-quality').value; try { localStorage.setItem('screenhop.quality',quality); } catch {} reportActivity(true); });
+addEventListener('screenhop-recording', event => { recordingActive = Boolean(event.detail); reportActivity(true); });
+document.addEventListener('visibilitychange', () => { reportActivity(true); refreshDiagnostics(); });
+let diagnosticTimer, diagnosticSample = null, diagnosticsBusy = false;
+async function refreshDiagnostics() {
+ clearTimeout(diagnosticTimer);
+ if (viewerLeaving || document.hidden || !$('diagnostics').open || !document.querySelector('.tool-dock').classList.contains('open')) { diagnosticSample = null; return; }
+ if (diagnosticsBusy) return;
+ diagnosticsBusy = true;
+ let cadence = 'FPS / dropped frames: unavailable for this transport';
+ try {
+  if (rtcMode === 'webrtc' && rtcPeer) {
+   const reports = await rtcPeer.getStats();
+   for (const report of reports.values()) if (report.type === 'inbound-rtp' && report.kind === 'video') {
+    const measured = diagnosticSample && report.timestamp > diagnosticSample.timestamp ? (report.framesDecoded - diagnosticSample.framesDecoded) * 1000 / (report.timestamp - diagnosticSample.timestamp) : report.framesPerSecond;
+    cadence = `Decoded FPS: ${Number.isFinite(measured) ? measured.toFixed(1) : 'sampling…'} · dropped: ${report.framesDropped ?? 'unavailable'}`;
+    diagnosticSample = report;
+   }
+  }
+  $('diagnostic-values').textContent = `CSS target: ${width} × ${height} · DPR ${config.dpr || 1}\nVideo: ${rtcVideo.videoWidth || '—'} × ${rtcVideo.videoHeight || '—'}\nTransport: ${rtcMode === 'webrtc' ? 'WebRTC' : rtcMode === 'connecting' ? 'Connecting' : 'JPEG compatibility'}\nRequested cadence: ${activityDemand().fps} FPS\n${cadence}\nChromium emulation · decorative device skin\nThis does not emulate Safari or a mobile OS.`;
+ } catch { $('diagnostic-values').textContent = 'Video diagnostics temporarily unavailable.'; }
+ finally { diagnosticsBusy = false; if (!viewerLeaving && !document.hidden && $('diagnostics').open && document.querySelector('.tool-dock').classList.contains('open')) diagnosticTimer = setTimeout(refreshDiagnostics,1000); }
+}
+$('diagnostics').addEventListener('toggle',refreshDiagnostics);
+new MutationObserver(refreshDiagnostics).observe(document.querySelector('.tool-dock'),{attributes:true,attributeFilter:['class']});
+addEventListener('pagehide', () => { viewerLeaving = true; clearTimeout(activityTimer); clearTimeout(diagnosticTimer); });
+const events = new EventSource(config.base + '/events?clientId=' + encodeURIComponent(clientId));
 events.addEventListener('open', () => { if (config.transport === 'webrtc') { status('connecting','Connecting video'); void startRTC(); } else status('live','Live · Compatibility'); });
 events.addEventListener('signal', event => { try { acceptRTCSignal(JSON.parse(event.data)); } catch {} });
 events.addEventListener('frame', event => { if(config.transport === 'webrtc' && rtcMode !== 'jpeg')return; try { const frame = JSON.parse(event.data); if (typeof frame.data !== 'string') return; display.src = 'data:image/jpeg;base64,' + frame.data; screen.classList.add('has-frame'); status('live','Live'); } catch { toast('Unable to display a preview frame.'); } });
 events.addEventListener('state', event => { try { updateState(JSON.parse(event.data)); } catch {} });
 events.addEventListener('error', event => { if (event.data) { try { const error = JSON.parse(event.data); toast(error.message || 'Preview unavailable.'); status('error','Unavailable'); } catch {} } else { status('connecting','Reconnecting'); } });
-window.addEventListener('pagehide', () => { events.close(); closeRTC(); });
+window.addEventListener('pagehide', () => { inputQueue.length = 0; if (mobileInput && (remoteTouch || capturedPointer !== null)) void post('/input',{kind:'touch',type:'touchCancel'}).catch(() => {}); events.close(); closeRTC(); });
 new ResizeObserver(fit).observe($('stage'));
 updateState(config); updateFrame();
 const captureScript = document.createElement('script'); captureScript.src = config.base + '/capture-ui.js'; captureScript.onerror = () => { $('capture-hint').textContent = 'Capture controls could not load. Reload this preview to retry.'; }; document.head.append(captureScript);

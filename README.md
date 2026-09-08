@@ -2,9 +2,9 @@
 
 Pick a device. Open its browser preview. Link your screens.
 
-**Local development build — not published.**
+ScreenHop 1.0.0 · MIT-licensed code · Chromium device previews.
 
-ScreenHop is an Omarchy shell plugin with 66 searchable presets across 10 categories and custom viewport sizes. Each selection opens a separate preview at the device's CSS dimensions.
+ScreenHop is an Omarchy shell plugin with 103 searchable presets and custom viewport sizes. Each selection opens a separate preview at the device's CSS dimensions.
 
 ![ScreenHop centered device preview](preview.png)
 
@@ -18,7 +18,7 @@ Click **ScreenHop** in the bar, enter your website URL (including localhost), an
 
 Use category chips to browse Apple phones, Android phones, tablets, foldables, watches, computers, TVs, kiosks, handhelds and smart panels. **Custom size** accepts 100–3840 CSS pixels per axis and pixel density 1–4, with phone touch or desktop mode. Device skins include classic/notched/island phones, camera bezels, tablets, foldables, watches, laptops and display stands. Skins are original decorative approximations, not vendor artwork; they do not change the page viewport or emulate browser/OS chrome.
 
-Specialty presets marked “responsive” are representative layouts, not certified device dimensions or hardware emulation. New branded phone/tablet profiles use [Playwright v1.55.0 device descriptors](https://github.com/microsoft/playwright/blob/v1.55.0/packages/playwright-core/src/server/deviceDescriptorsSource.json), preferring CSS screen size when supplied. Existing preset dimensions remain compatible with earlier ScreenHop sessions.
+Specialty presets marked “responsive” are representative layouts, not certified device dimensions or hardware emulation. The earlier branded phone/tablet profiles use [Playwright v1.55.0 device descriptors](https://github.com/microsoft/playwright/blob/v1.55.0/packages/playwright-core/src/server/deviceDescriptorsSource.json), preferring CSS screen size when supplied. Existing preset dimensions remain compatible with earlier ScreenHop sessions.
 
 Framed and direct previews use separate browser profiles. Within each mode, previews share that mode's browser cookies. Existing personal browser sessions are not imported. Named account profiles and session import are planned in [PLAN.md](PLAN.md).
 
@@ -44,7 +44,7 @@ Regression coverage includes IdentityServer, Okta, Azure AD/Microsoft Entra ID, 
 
 Cloudflare can still challenge or reject emulated/automated browsers. ScreenHop does not bypass those checks. Cloudflare documents that headless browsers and automation are unsupported for production challenge solving: [supported browsers](https://developers.cloudflare.com/cloudflare-challenges/reference/supported-browsers/). Direct mode removes the streamed/headless view but still uses viewport emulation and is not a guarantee of challenge compatibility.
 
-Clicks match visible unique data-testid, aria-label, id, name, link href or semantic button text, and skip missing, hidden or ambiguous controls. Embedded frames, shadow DOM and arbitrary custom controls are not synchronized. Linked actions run in each preview; use test data for actions that change application state.
+Clicks match visible unique semantic labels and text, with generated IDs as a last resort. Dialog and menu controls resolve inside the equivalent open panel; inert, aria-hidden, missing and ambiguous controls are skipped. On omarchy.org, explicit theme selections synchronize the selected theme through the site’s own buttons, including when previews start with different themes or only one theme picker is open. Browser storage and authentication data are not copied. Embedded frames, shadow DOM and arbitrary custom controls are not synchronized. Linked actions run in each preview; use test data for actions that change application state.
 
 ## Phone remote
 
@@ -54,21 +54,37 @@ Tap to click and swipe to scroll. For typing, tap the field inside the preview, 
 
 **Stop sharing** closes the listener, disconnects phones and revokes the pairing URL. ScreenHop uses TCP port **53318**. When UFW needs a rule, enabling Phone remote invokes the system password prompt to allow only the active local subnet/interface. ScreenHop never reads or stores the password. The scoped firewall rule remains for later sessions; no service listens while sharing is off. Sharing defaults off. The pairing URL grants control over these previews: use a trusted local network, since the connection uses local HTTP. Both devices must be reachable on the same network; guest Wi-Fi isolation or a firewall may block access. `qrencode` is optional; a copyable URL is always available.
 
-## Requirements and local installation
+## Requirements and installation
 
 - Omarchy shell / Quickshell with third-party widgets and current Hyprland Lua dispatchers.
-- Node.js 22 or later with built-in WebSocket support.
+- Node.js 22.4 or later with built-in WebSocket support.
 - Chromium, or a Chromium-based executable selected with SCREENHOP_BROWSER.
 
 No npm dependencies or browser extension are needed.
 
+Install from the public repository:
+
 ```sh
-bash scripts/install.sh
+omarchy plugin add https://github.com/jeremielumandong/omarchy-screenhop
 ```
 
-The widget appears at the right of the bar. The installer keeps backups outside Omarchy’s plugin discovery directory and migrates older timestamped backup folders so they cannot override the current plugin. After updating, close all ScreenHop previews and wait 35 seconds before reopening them so the previous controller exits. Opening just one new window while old previews remain open still uses that old controller. Browser profile cookies are retained.
+For a downloaded source package, run `bash scripts/install.sh` from its directory. The installer validates the plugin and checks dependencies before installing. It does not install system packages automatically.
 
-To remove the widget from the bar: `omarchy plugin disable arkane.screenhop`.
+The widget appears at the right of the bar. The installer keeps backups outside Omarchy’s plugin discovery directory and migrates older timestamped backup folders so they cannot override the current plugin. After updating, use **Workspace and tools → Check build → Apply update** in the picker. Confirming closes and restores framed previews after the previous controller exits. Unsaved page changes are lost, phone sharing stops, and linking starts off. Authentication/callback URLs cannot be restored. Browser profile cookies are retained. The installer restarts the shell when the picker code changes, preventing cached URL defaults and controls.
+
+### Removal
+
+Finish any unsaved preview work, then stop both preview modes before removing the plugin:
+
+```sh
+node ~/.config/omarchy/plugins/arkane.screenhop/viewport.mjs --close
+node ~/.config/omarchy/plugins/arkane.screenhop/native-preview.mjs --close
+omarchy plugin remove arkane.screenhop
+```
+
+Closing framed previews also stops phone sharing when the controller exits. To hide only the widget, use `omarchy plugin disable arkane.screenhop`; hiding the widget does not stop existing previews.
+
+Removal preserves browser profiles, saved workspaces, screenshots and installer backups. Their paths are documented below. If you enabled a UFW rule, it remains after removal: review `sudo ufw status numbered` for the rule labeled `ScreenHop phone remote`, then remove that specific numbered rule with `sudo ufw delete <number>` if it is no longer needed. ScreenHop does not remove unrelated firewall rules.
 
 ## Local state and CLI
 
@@ -101,8 +117,44 @@ bash tests/install-smoke.sh
 
 Browser tests require local browser/socket access. The QML test requires a Wayland session. See [VALIDATION.md](VALIDATION.md) for results.
 
-Repository configured locally: `git@github.com:jeremielumandong/omarchy-screenhop.git`. No push, tag or GitHub release has been made.
+Repository: [jeremielumandong/omarchy-screenhop](https://github.com/jeremielumandong/omarchy-screenhop). Publication preparation and listing text are in [PUBLICATION.md](docs/PUBLICATION.md).
 
 Device presets are informed by [Playwright's descriptors](https://github.com/microsoft/playwright/blob/v1.51.1/packages/playwright-core/src/server/deviceDescriptorsSource.json). Viewport emulation uses the [Chrome DevTools Protocol](https://chromedevtools.github.io/devtools-protocol/tot/Emulation/).
 
 Capture export checks: `node --test tests/screenshot.test.mjs` and `node tests/capture-ui-smoke.mjs`. The recording smoke test requires Chromium, ffmpeg and ffprobe; ffmpeg is only a test dependency.
+
+## Performance and diagnostics
+
+Preview controls include **Auto**, **Eco**, and **Smooth** capture modes. Auto requests 30 fps during interaction and 10 fps after three seconds idle; hidden previews request 2 fps. Eco requests 5 fps idle and 1 fps hidden. Smooth requests 30 fps while visible and 5 fps hidden. Input immediately requests 30 fps in all modes, and recording requests 30 fps. Actual decoded FPS depends on the browser, webpage and machine. The highest demand from connected viewers controls each source capture; device CSS dimensions and DPR do not change.
+
+**Diagnostics** displays the selected CSS viewport/DPR, received video dimensions, WebRTC decoded FPS and dropped frames. Statistics refresh only while the panel is open and visible. These are Chromium previews, not iOS/Safari emulation. Linking status and pause reasons remain visible inside preview controls.
+
+JPEG capture starts only for viewers needing compatibility mode and stops when its final subscriber recovers or disconnects. Slow connections retain only the latest pending image while preserving the order of control messages; excessively congested connections reconnect. Multiple capture geometry updates are coalesced while retaining Chromium's required stabilization pass.
+
+## Workspaces and batch screenshots
+
+Expand **Workspace and tools** in the device picker. **Save open previews** stores the URLs, devices and orientations of framed previews. Choose **Open <name>** to open that set again. Saved workspaces start unlinked. Login/callback URLs are rejected; cookies, passwords and authentication transactions are never exported. Workspace files are private under `$XDG_STATE_HOME/screenhop/workspaces.json` (normally `~/.local/state`). Names are unique; existing workspaces are never silently overwritten.
+
+**Screenshot all** saves sequential PNG captures to a new directory under `~/Pictures/ScreenHop`. Choose **Include skin** or **Page only**. These are sequential captures, not a synchronized instant across devices. The completion message gives the output directory.
+
+**Check build** compares the installed renderer build with the running controller. **Apply update** requires explicit confirmation before closing previews. The phone diagnostics report connected preview viewers, not unique physical phones; choose **Refresh phone status** to update the count.
+
+Additional checks:
+
+```sh
+node --test tests/workspaces.test.mjs tests/transport-performance.test.mjs tests/adaptive-capture.test.mjs
+node --test tests/workspace-browser.test.mjs tests/adaptive-viewer.test.mjs
+node tests/performance-bench.mjs /path/to/screenhop /tmp/screenhop-benchmark.json
+```
+
+## Mouse and touch input
+
+Phone and tablet presets show a round touch indicator and send native single-finger touch events. Tap activates controls; drag scrolls the page. Hover-only menus are intentionally not activated on touch presets. Laptop and desktop presets use mouse input and support CSS hover; leaving a preview clears its hover state. Desktop headless capture preserves fine-pointer/hover media capabilities instead of resetting them through a disabled touch override.
+
+## Device catalog and licensing
+
+The 103 presets include current iPhone, Galaxy, Pixel and other Android families. See [specifications and CSS viewport assumptions](docs/DEVICE_SOURCES.md). New CSS sizes are visibly marked approximate: panel pixels divided by a selected DPR do not establish a hardware-verified browser viewport.
+
+The public package uses ScreenHop's original decorative frames. Samsung-provided emulator PNG artwork is excluded; local development installations may contain separately supplied artwork. Manufacturer names identify test presets and do not imply endorsement.
+
+ScreenHop code and its original preview artwork are MIT licensed. Adapted Playwright device descriptors retain Apache-2.0 licensing and notices; see [third-party notices](THIRD_PARTY_NOTICES.md). The marketplace preview uses an original ScreenHop demonstration page and original CSS frame.
