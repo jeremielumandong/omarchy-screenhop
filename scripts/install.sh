@@ -21,7 +21,7 @@ if [[ -e "$plugin_dir" ]]; then
     cp -a -- "$plugin_dir" "$backup_dir/plugin"
 fi
 mkdir -p -- "$plugin_dir"
-for filename in Widget.qml manifest.json viewport.mjs native-preview.mjs preview-host.mjs phone-remote.mjs phone-firewall.mjs viewer.html linked-previews.mjs sync-policy.mjs sync.js capture-rtc.js devices.json README.md PLAN.md LICENSE preview.png; do
+for filename in Widget.qml manifest.json viewport.mjs native-preview.mjs preview-host.mjs phone-remote.mjs phone-firewall.mjs viewer.html linked-previews.mjs sync-policy.mjs sync.js capture-rtc.js capture-ui.js devices.json README.md PLAN.md LICENSE preview.png; do
     cp -- "$source_dir/$filename" "$plugin_dir/$filename"
 done
 omarchy-shell shell rescanPlugins

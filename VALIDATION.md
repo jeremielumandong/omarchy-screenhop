@@ -103,3 +103,11 @@ Actual ScreenHop integration verified desktop/phone video, no JPEG fallback work
 Video uses WebRTC; production input remains on the ordered HTTP control channel. No external STUN/TURN service or new native dependency is used.
 
 Final validation:42combined authentication, source-browser, signaling, phone and WebRTC integrationtests passed. Visible borderless WebRTC integrationpassed afterfixing Chromium’s sharedcaptureindicator resizingallsourcewindows; policy-deniedautomaticfallback andexplicitJPEGcompatibility integrationpassed. PhysicalphoneWi-Fi remains userverification.
+
+## Resolution and export validation
+
+The live iPhone 11 Pro Max preview was verified at 414 × 896 CSS pixels, DPR 3, and 414 × 896 video after correction. A regression deliberately changes the native capture surface size and verifies automatic recovery.
+
+Screenshot integration verifies 1170 × 2532 page PNG output for 390 × 844 at DPR 3, frame-region cropping, frame-state restoration, and authenticated desktop/phone routes.
+
+The capture UI smoke test downloaded both PNG modes and decoded three WebM recordings with ffmpeg: JPEG page, WebRTC page, and native device-frame capture. Page recordings were 390 × 844; the frame recording was 406 × 892 (encoder alignment from a 407 × 893 region). Decoded timelines exceeded one second. Stopping the cloned WebRTC recording preserved the live preview track.

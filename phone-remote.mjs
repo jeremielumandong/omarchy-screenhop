@@ -1,8 +1,9 @@
+import {readFile} from 'node:fs/promises';
 import {createServer} from 'node:http';
 import {randomBytes} from 'node:crypto';
 import {networkInterfaces as systemInterfaces} from 'node:os';
 import {execFileSync} from 'node:child_process';
-import {inputCommand,rtcMessage} from './preview-host.mjs';
+import {inputCommand,rtcMessage,actionMessage} from './preview-host.mjs';
 
 const escapeHTML=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 
@@ -59,7 +60,7 @@ export class PhoneRemote {
   }
   async handle(req,res) {
     res.setHeader('Cache-Control','no-store');res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Referrer-Policy','no-referrer');
-    res.setHeader('Content-Security-Policy',"default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; media-src 'self' blob:; connect-src 'self'; frame-ancestors 'none'; form-action 'none'; base-uri 'none'");
+    res.setHeader('Content-Security-Policy',"default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; media-src 'self' blob:; connect-src 'self'; frame-ancestors 'none'; form-action 'none'; base-uri 'none'");
     const validHosts=new Set([...this.addresses].map(address=>`${address}:${this.port}`));
     if(!this.enabled||!validHosts.has(req.headers.host)){res.writeHead(403);res.end();return;}
     const origin='http://'+req.headers.host;
@@ -74,7 +75,7 @@ export class PhoneRemote {
       res.setHeader('Content-Type','text/html; charset=utf-8');
       res.end(`<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>ScreenHop remote</title><style>body{font:16px system-ui;background:#16181d;color:#f2f3f5;max-width:36rem;margin:auto;padding:24px}a{display:flex;justify-content:space-between;gap:16px;color:inherit;text-decoration:none;background:#272b34;padding:20px;border-radius:12px;margin:12px 0}span,p{color:#b9c2d0}</style></head><body><h1>ScreenHop remote</h1><p>Choose a preview to control. Enable Link previews to drive the other screens. Linking pauses during sign-in and security checks.</p>${devices||'<p>No framed previews are open. Open a device preview on your computer, then refresh this page.</p>'}</body></html>`);return;
     }
-    const match=suffix.match(/^view\/([A-Za-z0-9_-]+)(?:\/(events|input|action|signal))?$/);
+    const match=suffix.match(/^view\/([A-Za-z0-9_-]+)(?:\/(events|input|action|signal|capture-ui\.js))?$/);
     const record=match&&this.host.records.get(match[1]);
     if(!record){res.writeHead(404);res.end();return;}
     const route=match[2];
@@ -82,6 +83,10 @@ export class PhoneRemote {
       const config={...record.device,id:record.id,base:prefix+'view/'+record.id,url:record.url,linked:record.linked,reason:record.reason||'',phone:true,transport:this.host.signal?'webrtc':'jpeg'};
       res.setHeader('Content-Type','text/html; charset=utf-8');
       res.end(this.host.template.replace('__SCREENHOP_CONFIG__',JSON.stringify(config).replaceAll('<','\\u003c')));return;
+    }
+    if(req.method==='GET'&&route==='capture-ui.js'){
+      res.setHeader('Content-Type','text/javascript; charset=utf-8');
+      res.end(await readFile(new URL('./capture-ui.js',import.meta.url),'utf8'));return;
     }
     if(req.method==='GET'&&route==='events'){
       res.writeHead(200,{'Content-Type':'text/event-stream','Connection':'keep-alive'});
@@ -95,7 +100,7 @@ export class PhoneRemote {
     if(req.method!=='POST'||!['input','action','signal'].includes(route)){res.writeHead(405);res.end();return;}
     if(!req.headers['content-type']?.toLowerCase().startsWith('application/json'))throw new Error('JSON required');
     let body='',size=0;for await(const chunk of req){size+=chunk.length;if(size>(route==='signal'?120000:20000))throw new Error('Input too large');body+=chunk;}
-    const payload=JSON.parse(body);if(!payload||typeof payload!=='object'||Array.isArray(payload))throw new Error('Invalid payload');
+    const payload=JSON.parse(body);let result;if(!payload||typeof payload!=='object'||Array.isArray(payload))throw new Error('Invalid payload');
     if(route==='signal'){
       const message=rtcMessage(payload);
       if(!this.host.signal)throw new Error('Video signaling unavailable');
@@ -112,10 +117,10 @@ export class PhoneRemote {
       inputCommand(payload,record.device.width,record.device.height);
       await this.host.input(record.id,payload);
     }else{
-      if(!['link','reload','back','forward'].includes(payload.action))throw new Error('Unsupported action');
-      if(payload.action==='link'&&typeof payload.enabled!=='boolean')throw new Error('Invalid link state');
-      await this.host.action(record.id,payload.action==='link'?{action:'link',enabled:payload.enabled}:{action:payload.action});
+      result=await this.host.action(record.id,actionMessage(payload));
     }
-    res.setHeader('Content-Type','application/json');res.end('{"ok":true}');
+    const response=JSON.stringify(result===undefined?{ok:true}:result);
+    if(response.length>100*1024*1024)throw new Error('Capture is too large');
+    res.setHeader('Content-Type','application/json');res.end(response);
   }
 }

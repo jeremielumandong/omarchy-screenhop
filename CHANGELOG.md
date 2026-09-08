@@ -22,3 +22,6 @@ Local development version; not published.
 
 - WebRTC is now the default video transport for framed desktop and phone previews, with direct native Chromium tab capture and on-demand JPEG fallback.
 - Preserved interactive controls, device skins, authentication isolation, navigation reconnection, and phone revocation.
+
+- Corrected native video aspect ratio automatically without changing CSS viewport dimensions; distorted video falls back instead of stretching.
+- Added PNG screenshots and silent video recording, with device-frame or webpage-only output.

@@ -295,6 +295,7 @@ async function serve(state, headless) {
   }
   async function viewerAction(id,data) {
     const sessionId=sessions.get(id); if(!sessionId)throw new Error('Preview closed');
+    if(data.action==='screenshot')return screenshot(id,data.skin);
     if(data.action==='link') { linker.setEnabled(!!data.enabled); return; }
     if(data.action==='reload') { await cdp.send('Page.reload',{},sessionId); return; }
     if(['back','forward'].includes(data.action)) {
@@ -304,6 +305,40 @@ async function serve(state, headless) {
       return;
     }
     throw new Error('Unknown preview action');
+  }
+
+
+  function screenshot(id,skin) {
+    const record=host.records.get(id);if(!record)throw new Error('Preview closed');
+    record.captureQueue=(record.captureQueue||Promise.resolve()).catch(()=>{}).then(()=>captureScreenshot(id,skin));
+    return record.captureQueue;
+  }
+  async function captureScreenshot(id,skin) {
+    if(typeof skin!=='boolean')throw new Error('Choose whether to include the device skin');
+    const record=host.records.get(id);if(!record)throw new Error('Preview closed');
+    let image;
+    if(!skin) {
+      image=await cdp.send('Page.captureScreenshot',{format:'png',fromSurface:true,captureBeyondViewport:false},record.sessionId);
+    }else{
+      const viewerTargetId=[...viewerTargets].find(([,source])=>source===id)?.[0];
+      if(!viewerTargetId)throw new Error('The device preview window is closed');
+      const {sessionId}=await viewerCdp.send('Target.attachToTarget',{targetId:viewerTargetId,flatten:true});
+      let changed=false;
+      try {
+        const geometry=await viewerCdp.send('Runtime.evaluate',{expression:`(async()=>{const device=document.getElementById('device');if(!device)throw new Error('Device frame is unavailable');const hide=document.createElement('style');hide.id='screenhop-capture-hide';hide.textContent='.tool-dock,.phone-keyboard,.toast,.recording-status{visibility:hidden!important}';document.head.append(hide);const wasBare=device.classList.contains('bare');if(wasBare){device.classList.remove('bare');fit();}await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));const r=(document.getElementById('capture-region')||document.getElementById('fit-box')).getBoundingClientRect();return {x:r.x+scrollX,y:r.y+scrollY,width:r.width,height:r.height,wasBare};})()`,awaitPromise:true,returnByValue:true},sessionId);
+        if(geometry.exceptionDetails||!geometry.result.value)throw new Error('The device frame is not ready');
+        const {x,y,width,height,wasBare}=geometry.result.value;changed=wasBare;
+        if(![x,y,width,height].every(Number.isFinite)||width<=0||height<=0)throw new Error('The device frame is not visible');
+        image=await viewerCdp.send('Page.captureScreenshot',{format:'png',fromSurface:true,captureBeyondViewport:true,clip:{x:Math.max(0,x),y:Math.max(0,y),width,height,scale:1}},sessionId);
+      }finally{
+        await viewerCdp.send('Runtime.evaluate',{expression:"document.getElementById('screenhop-capture-hide')?.remove()"},sessionId).catch(()=>{});
+        if(changed)await viewerCdp.send('Runtime.evaluate',{expression:"document.getElementById('device').classList.add('bare');fit();"},sessionId).catch(()=>{});
+        await viewerCdp.send('Target.detachFromTarget',{sessionId}).catch(()=>{});
+      }
+    }
+    const png=Buffer.from(image.data,'base64');
+    const name=record.device.name.replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'').slice(0,80)||'preview';
+    return {mimeType:'image/png',data:image.data,width:png.readUInt32BE(16),height:png.readUInt32BE(20),filename:`ScreenHop-${name}-${skin?'device':'page'}-${new Date().toISOString().replace(/[:.]/g,'-')}.png`};
   }
 
   const socket = join(state, 'controller.sock');
@@ -334,7 +369,7 @@ async function serve(state, headless) {
               if(!phoneRemote){const {PhoneRemote}=await import('./phone-remote.mjs');phoneRemote=await PhoneRemote.create({host});}
             }else throw new Error('Use --phone on or --phone off.');
           }
-          const result = (request.phone!==undefined||request['phone-status']) ? {status:'phone',...(phoneRemote?phoneRemote.info():{enabled:false,url:'',urls:[],qrData:''})} : request.status ? {status:'state',enabled:linked,reason:linker.reason,previewCount:sessions.size} : request.link !== undefined ? {status:'linked', enabled:linked, reason:linker.reason} : request.ping ? {status:'ok',protocol:5} : request.close ? await closePreview() : request.inspect ? await inspectPreview(request.targetId) : await preview(request);
+          const result = (request.phone!==undefined||request['phone-status']) ? {status:'phone',...(phoneRemote?phoneRemote.info():{enabled:false,url:'',urls:[],qrData:''})} : request.status ? {status:'state',enabled:linked,reason:linker.reason,previewCount:sessions.size} : request.link !== undefined ? {status:'linked', enabled:linked, reason:linker.reason} : request.ping ? {status:'ok',protocol:6} : request.close ? await closePreview() : request.inspect ? await inspectPreview(request.targetId) : await preview(request);
           client.end(JSON.stringify(result) + '\n');
         } catch (error) { client.end(JSON.stringify({status:'error', error:error.message}) + '\n'); }
       });
@@ -392,7 +427,7 @@ async function main() {
   const socket = join(state, 'controller.sock'); let response;
   try {
     const running=await rpc(socket,{ping:true});
-    if(running.protocol!==5&&!opts.close)throw new Error('ScreenHop was updated. Save your work, close all ScreenHop previews, wait 35 seconds, then reopen them to activate the update.');
+    if(running.protocol!==6&&!opts.close)throw new Error('ScreenHop was updated. Save your work, close all ScreenHop previews, wait 35 seconds, then reopen them to activate the update.');
     response = await rpc(socket, opts);
   } catch (error) {
     if (!['ENOENT','ECONNREFUSED'].includes(error.code)) throw error;

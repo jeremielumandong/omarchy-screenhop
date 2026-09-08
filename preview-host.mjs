@@ -50,9 +50,9 @@ export class PreviewHost {
   async handle(req,res) {
     res.setHeader('Cache-Control','no-store'); res.setHeader('X-Content-Type-Options','nosniff');
     res.setHeader('Referrer-Policy','no-referrer');
-    res.setHeader('Content-Security-Policy',"default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; media-src 'self' blob:; connect-src 'self'; frame-ancestors 'none'");
+    res.setHeader('Content-Security-Policy',"default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; media-src 'self' blob:; connect-src 'self'; frame-ancestors 'none'");
     const path=new URL(req.url,this.origin).pathname;
-    const match=path.match(new RegExp('^/'+this.token+'/view/([A-Fa-f0-9]+)(/(events|input|action|signal))?$'));
+    const match=path.match(new RegExp('^/'+this.token+'/view/([A-Fa-f0-9]+)(/(events|input|action|signal|capture-ui\\.js))?$'));
     const record=match&&this.records.get(match[1]);
     if(!record){res.writeHead(404);res.end('Preview not found');return;}
     const route=match[3];
@@ -61,6 +61,10 @@ export class PreviewHost {
       const json=JSON.stringify(config).replaceAll('<','\\u003c');
       res.setHeader('Content-Type','text/html; charset=utf-8');
       res.end(this.template.replace('__SCREENHOP_CONFIG__',json)); return;
+    }
+    if(req.method==='GET'&&route==='capture-ui.js') {
+      res.setHeader('Content-Type','text/javascript; charset=utf-8');
+      res.end(await readFile(new URL('./capture-ui.js',import.meta.url),'utf8'));return;
     }
     if(req.method==='GET'&&route==='events') {
       res.writeHead(200,{'Content-Type':'text/event-stream','Connection':'keep-alive'});
@@ -75,13 +79,15 @@ export class PreviewHost {
     if(req.headers.origin&&req.headers.origin!==this.origin)throw new Error('Invalid origin');
     if(!req.headers['content-type']?.startsWith('application/json'))throw new Error('JSON required');
     let body='',size=0; for await(const chunk of req){size+=chunk.length;if(size>(route==='signal'?120000:20000))throw new Error('Input too large');body+=chunk;}
-    const payload=JSON.parse(body);
+    const payload=JSON.parse(body);let result;
     if(route==='signal'){
       if(!this.signal)throw new Error('Video signaling unavailable');
       await this.signal(record.id,rtcMessage(payload));
     }else if(route==='input')await this.input(record.id,payload);
-    else await this.action(record.id,payload);
-    res.setHeader('Content-Type','application/json');res.end('{"ok":true}');
+    else result=await this.action(record.id,actionMessage(payload));
+    const response=JSON.stringify(result===undefined?{ok:true}:result);
+    if(response.length>100*1024*1024)throw new Error('Capture is too large');
+    res.setHeader('Content-Type','application/json');res.end(response);
   }
   shutdown() {
     for(const id of this.records.keys())this.remove(id);
@@ -135,4 +141,11 @@ export function rtcMessage(data,{response=false}={}) {
     message.error=data.error;
   }
   return message;
+}
+
+export function actionMessage(payload) {
+  if(!payload||typeof payload!=='object'||Array.isArray(payload)||!['link','reload','back','forward','screenshot'].includes(payload.action))throw new Error('Unsupported action');
+  if(payload.action==='link'){if(typeof payload.enabled!=='boolean')throw new Error('Invalid link state');return {action:'link',enabled:payload.enabled};}
+  if(payload.action==='screenshot'){if(typeof payload.skin!=='boolean')throw new Error('Choose whether to include the device skin');return {action:'screenshot',skin:payload.skin};}
+  return {action:payload.action};
 }

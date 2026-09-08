@@ -26,6 +26,14 @@ The viewer menu shows **Live · WebRTC** when direct video is connected. Direct 
 
 The frame is visual styling, not a mobile operating system or Safari emulator. Chromium remains the rendering engine. Mobile pages without a viewport meta tag can have a wider layout viewport, as on actual devices. Native file pickers, downloads, browser dialogs, drag-and-drop files and accessibility tree interaction are not exposed through the streamed frame; use direct mode for those workflows.
 
+## Screenshots and recordings
+
+Open **⋯** and choose **Include device frame**, then **Screenshot** or **Record**. Uncheck it to save the webpage only. Screenshots download as PNG; video downloads as WebM where supported (MP4 is selected only if the browser supports it).
+
+Page screenshots use the renderer's device pixel density—for example, a 390 × 844 viewport at 3× produces a 1170 × 2532 PNG. Frame screenshots capture the displayed skin and webpage at the viewer's display resolution. Neither export changes the webpage viewport. Device skins remain decorative approximations, not Safari or a mobile operating system.
+
+Recording with a frame asks you to share **this ScreenHop tab** in Chromium's sharing dialog. Other tabs or screens are rejected. Page-only recording uses the existing preview video and needs no screen-sharing permission. A visible timer and **Stop** button remain outside the device's clickable area. Recordings are silent and stop at 3 minutes or 128 MB. Frame recording needs desktop Chromium; supported phone browsers can use page-only recording and both screenshot modes.
+
 ## Linked browsing and authentication
 
 Linking **defaults off**. Enable **Link previews** for ordinary page comparison. It mirrors matching clicks, ordinary text input and proportional page scrolling. Trusted same-origin navigation from links, buttons and clickable rows is copied after it settles, including SPA route changes. Redirects without a trusted navigation gesture are not broadcast. Opening another preview preserves the group’s linking setting.
@@ -96,3 +104,5 @@ Browser tests require local browser/socket access. The QML test requires a Wayla
 Repository configured locally: `git@github.com:jeremielumandong/omarchy-screenhop.git`. No push, tag or GitHub release has been made.
 
 Device presets are informed by [Playwright's descriptors](https://github.com/microsoft/playwright/blob/v1.51.1/packages/playwright-core/src/server/deviceDescriptorsSource.json). Viewport emulation uses the [Chrome DevTools Protocol](https://chromedevtools.github.io/devtools-protocol/tot/Emulation/).
+
+Capture export checks: `node --test tests/screenshot.test.mjs` and `node tests/capture-ui-smoke.mjs`. The recording smoke test requires Chromium, ffmpeg and ffprobe; ffmpeg is only a test dependency.
