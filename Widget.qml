@@ -8,7 +8,7 @@ import qs.Ui
 BarWidget {
     id: root
     moduleName: "arkane.screenhop"
-    Component.onCompleted: console.info("ScreenHop 1.0.0 widget loaded:", pluginDirectory)
+    Component.onCompleted: console.info("ScreenHop 1.0.0 widget loaded:", pluginDirectory, "initial URL:", website)
     property bool opened: false
     property bool popoutSwitchClosing: false
     property var devices: []
@@ -19,7 +19,7 @@ BarWidget {
     property string customHeight: "844"
     property string customDpr: "2"
     property bool customMobile: true
-    property string website: "http://localhost:3000"
+    property string website: "https://omarchy.org"
     property bool landscape: false
     property bool deviceFrame: true
     property bool phoneEnabled: false
@@ -278,7 +278,7 @@ BarWidget {
             TextField {
                 width: parent.width
                 text: root.website
-                placeholderText: "https://example.com or localhost:3000"
+                placeholderText: "https://omarchy.org"
                 Accessible.name: "Website address"
                 enabled: !root.busy
                 onTextEdited: root.website = text
