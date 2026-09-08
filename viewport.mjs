@@ -273,6 +273,10 @@ async function serve(state, headless) {
   }
   async function relaySignal(id,message) {
     const record=host?.records.get(id);if(!record)throw new Error('Preview closed');
+    if(message.type==='resize'){
+      if(Date.now()-(record.lastCaptureResize||0)>200){record.lastCaptureResize=Date.now();await resizeCapture(id);}
+      return;
+    }
     if(message.type==='fallback'){
       const contextId=contexts.get(record.sessionId);
       if(contextId)await cdp.send('Runtime.evaluate',{expression:'globalThis.screenhopRTC?.signal('+JSON.stringify({type:'close',peerId:message.peerId})+')',contextId,awaitPromise:true},record.sessionId).catch(()=>{});
@@ -330,7 +334,7 @@ async function serve(state, headless) {
               if(!phoneRemote){const {PhoneRemote}=await import('./phone-remote.mjs');phoneRemote=await PhoneRemote.create({host});}
             }else throw new Error('Use --phone on or --phone off.');
           }
-          const result = (request.phone!==undefined||request['phone-status']) ? {status:'phone',...(phoneRemote?phoneRemote.info():{enabled:false,url:'',urls:[],qrData:''})} : request.status ? {status:'state',enabled:linked,reason:linker.reason,previewCount:sessions.size} : request.link !== undefined ? {status:'linked', enabled:linked, reason:linker.reason} : request.ping ? {status:'ok',protocol:4} : request.close ? await closePreview() : request.inspect ? await inspectPreview(request.targetId) : await preview(request);
+          const result = (request.phone!==undefined||request['phone-status']) ? {status:'phone',...(phoneRemote?phoneRemote.info():{enabled:false,url:'',urls:[],qrData:''})} : request.status ? {status:'state',enabled:linked,reason:linker.reason,previewCount:sessions.size} : request.link !== undefined ? {status:'linked', enabled:linked, reason:linker.reason} : request.ping ? {status:'ok',protocol:5} : request.close ? await closePreview() : request.inspect ? await inspectPreview(request.targetId) : await preview(request);
           client.end(JSON.stringify(result) + '\n');
         } catch (error) { client.end(JSON.stringify({status:'error', error:error.message}) + '\n'); }
       });
@@ -388,7 +392,7 @@ async function main() {
   const socket = join(state, 'controller.sock'); let response;
   try {
     const running=await rpc(socket,{ping:true});
-    if(running.protocol!==4&&!opts.close)throw new Error('ScreenHop was updated. Save your work, close all ScreenHop previews, wait 35 seconds, then reopen them to activate the update.');
+    if(running.protocol!==5&&!opts.close)throw new Error('ScreenHop was updated. Save your work, close all ScreenHop previews, wait 35 seconds, then reopen them to activate the update.');
     response = await rpc(socket, opts);
   } catch (error) {
     if (!['ENOENT','ECONNREFUSED'].includes(error.code)) throw error;

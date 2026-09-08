@@ -115,7 +115,7 @@ export function inputCommand(data,width,height) {
 export function rtcMessage(data,{response=false}={}) {
   if(response&&data?.type==='reset'&&data.peerId==='*')return {type:'reset',peerId:'*'};
   if(!data||typeof data!=='object'||Array.isArray(data)||typeof data.peerId!=='string'||!/^[A-Za-z0-9_-]{8,80}$/.test(data.peerId))throw new Error('Invalid video peer');
-  const allowed=response?['answer','candidate','error']:['offer','candidate','close','fallback'];
+  const allowed=response?['answer','candidate','error']:['offer','candidate','close','fallback','resize'];
   if(!allowed.includes(data.type))throw new Error('Invalid video signal');
   const message={peerId:data.peerId,type:data.type};
   if(data.type==='offer'||data.type==='answer') {

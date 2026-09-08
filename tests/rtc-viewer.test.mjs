@@ -34,6 +34,11 @@ test('WebRTC exact device geometry, interactive input, navigation recovery and p
   assert.match(await evalView('document.title'),/iPhone 13/);
   assert.equal(await evalView('document.querySelector("#rtc-video").videoHeight'),844);
   assert.equal(await evalView('document.querySelector("#display").naturalWidth'),0,'WebRTC must not require a JPEG stream');
+  const {windowId:sourceWindow}=await source.send('Browser.getWindowForTarget',{targetId:first.targetId});
+  await source.send('Browser.setContentsSize',{windowId:sourceWindow,width:390,height:1000});
+  await sleep(300);
+  await eventually(()=>evalView('rtcMode === "webrtc" && rtcVideo.videoWidth === 390 && rtcVideo.videoHeight === 844'),'native capture aspect ratio repairs after browser chrome changes');
+
   assert.match(await evalView('document.querySelector("#dimensions").textContent'),/390 × 844/);
   const geometry=await evalView('(()=>{const d=document.querySelector("#device").getBoundingClientRect(),s=document.querySelector("#stage").getBoundingClientRect();return{center:d.x+d.width/2,stage:s.x+s.width/2,centerY:d.y+d.height/2,stageY:s.y+s.height/2}})()');
   assert.ok(Math.abs(geometry.center-geometry.stage)<2,'device frame is horizontally centered');

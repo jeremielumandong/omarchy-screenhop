@@ -266,7 +266,7 @@ function sendRTC(message, generation = rtcGeneration) {
  return rtcSignalQueue;
 }
 function closeRTC(notify = true) {
- clearTimeout(rtcTimer); rtcGeneration++;
+ clearTimeout(rtcTimer); clearTimeout(rtcVideo.geometryTimer); rtcVideo.onresize=null; rtcGeneration++;
  const previousId = rtcPeerId;
  rtcPeer?.close(); rtcPeer = null; rtcPeerId = null;
  rtcCandidates = []; rtcRemoteQueue = Promise.resolve(); rtcSignalQueue = Promise.resolve();
@@ -302,10 +302,22 @@ async function startRTC() {
  pc.ontrack = event => {
   if (generation !== rtcGeneration) return;
   rtcVideo.srcObject = event.streams[0] || new MediaStream([event.track]);
+  let geometryAttempts=0;
   const ready = () => {
    if (generation !== rtcGeneration || !rtcVideo.videoWidth) return;
+   clearTimeout(rtcVideo.geometryTimer);
+   // Encoder scaling is allowed; stretching a differently shaped capture is not.
+   const ratioError=Math.abs(rtcVideo.videoHeight-height*rtcVideo.videoWidth/width);
+   if(ratioError>2) {
+    screen.classList.remove('rtc-live');status('connecting','Adjusting video');
+    if(geometryAttempts++>=4){fallbackRTC('Using compatibility preview to preserve device proportions.',generation);return;}
+    void sendRTC({type:'resize',peerId},generation).catch(()=>fallbackRTC('',generation));
+    rtcVideo.geometryTimer=setTimeout(ready,400);return;
+   }
+   geometryAttempts=0;
    clearTimeout(rtcTimer); rtcMode = 'webrtc'; screen.classList.add('rtc-live','has-frame'); status('live','Live · WebRTC');
   };
+  rtcVideo.onresize=ready;
   if (rtcVideo.requestVideoFrameCallback) rtcVideo.requestVideoFrameCallback(ready);
   else rtcVideo.addEventListener('loadeddata',ready,{once:true});
   void rtcVideo.play().catch(() => fallbackRTC('',generation));
