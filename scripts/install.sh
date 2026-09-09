@@ -10,6 +10,10 @@ command -v node >/dev/null
 node -e 'if (typeof WebSocket !== "function") throw new Error("Node.js with built-in WebSocket is required")'
 command -v omarchy-shell >/dev/null
 command -v omarchy >/dev/null
+# Build before changing the installed plugin; fail cleanly on missing dependencies.
+command -v flock >/dev/null
+command -v Xwayland >/dev/null
+bash "$source_dir/scripts/build-native.sh"
 omarchy plugin validate "$source_dir"
 if [[ -n ${SCREENHOP_BROWSER:-} ]]; then
     command -v "$SCREENHOP_BROWSER" >/dev/null
@@ -35,9 +39,15 @@ if [[ -e "$plugin_dir" ]]; then
     cp -a -- "$plugin_dir" "$backup_dir/plugin"
 fi
 mkdir -p -- "$plugin_dir"
-for filename in Widget.qml manifest.json viewport.mjs native-preview.mjs preview-host.mjs skin-assets.mjs event-sockets.mjs viewer.html linked-previews.mjs sync-policy.mjs sync.js capture-rtc.js capture-ui.js build.mjs workspaces.mjs devices.json README.md PLAN.md LICENSE THIRD_PARTY_NOTICES.md preview.png; do
+for filename in independent-browser.mjs native-launch.mjs native-chromium.mjs native-switch.mjs LOCAL_BROWSER_TEST.md Widget.qml manifest.json viewport.mjs native-preview.mjs preview-host.mjs skin-assets.mjs event-sockets.mjs viewer.html linked-previews.mjs sync-policy.mjs sync.js capture-rtc.js capture-ui.js build.mjs workspaces.mjs devices.json README.md PLAN.md LICENSE THIRD_PARTY_NOTICES.md preview.png; do
     cp -- "$source_dir/$filename" "$plugin_dir/$filename"
 done
+mkdir -p -- "$plugin_dir/native" "$plugin_dir/.native"
+cp -- "$source_dir/native/Preview.qml" "$source_dir/native/main.cpp" "$source_dir/native/skin-gesture-filter.h" "$plugin_dir/native/"
+native_temp=$(mktemp "$plugin_dir/.native/screenhop-native.XXXXXXXX")
+cp -- "$source_dir/.native/screenhop-native" "$native_temp"
+chmod 755 "$native_temp"
+mv -f -- "$native_temp" "$plugin_dir/.native/screenhop-native"
 # Remove retired phone-sharing modules from an older installation after backup.
 rm -f -- "$plugin_dir/phone-remote.mjs" "$plugin_dir/phone-firewall.mjs"
 mkdir -p -- "$plugin_dir/assets" "$plugin_dir/docs"

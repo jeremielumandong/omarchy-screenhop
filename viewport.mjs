@@ -171,6 +171,7 @@ async function serve(state, headless) {
       if (!targets.targetInfos.some(t => t.targetId === id)) { linker.remove(sessions.get(id)); sessions.delete(id); }
     }
     const {targetId} = await cdp.send('Target.createTarget', {url:'about:blank', newWindow:true});
+    try {
     const {sessionId} = await cdp.send('Target.attachToTarget', {targetId, flatten:true});
     sessions.set(targetId, sessionId);
     muted.set(sessionId, Date.now() + 10000);
@@ -240,6 +241,7 @@ async function serve(state, headless) {
     }
     muted.set(sessionId, Date.now() + 500);
     return {status:'ready', linked, reason:linker.reason, targetId, viewerTargetId, viewerUrl, device:device.name, width:device.width, height:device.height, url:device.url};
+    }catch(error){await closeOnePreview(targetId);throw error;}
   }
   async function connectBrowser(browserProfile, runHeadless) {
     await mkdir(browserProfile,{recursive:true,mode:0o700});
@@ -381,7 +383,7 @@ async function serve(state, headless) {
         try {
           const request = JSON.parse(buffer.split('\n')[0]);
           if (request.link !== undefined) linker.setEnabled(request.link === 'on');
-          const result = request.snapshot ? {status:'snapshot',previews:[...host?.records.values()||[]].map(record=>({targetId:record.id,device:record.device.id,url:record.url,width:record.device.width,height:record.device.height,dpr:record.device.dpr,mobile:record.device.mobile,landscape:record.device.id!=='custom' && devices.find(d=>d.id===record.device.id)?.width!==record.device.width}))} : request.capture ? await screenshot(request.capture,request.skin===true) : request.status ? {status:'state',build:loadedBuild,protocol:8,enabled:linked,reason:linker.reason,previewCount:sessions.size} : request.link !== undefined ? {status:'linked', enabled:linked, reason:linker.reason} : request.ping ? {status:'ok',protocol:8,build:loadedBuild} : request.close ? await closePreview() : request.inspect ? await inspectPreview(request.targetId) : await preview(request);
+          const result = request.snapshot ? {status:'snapshot',previews:[...host?.records.values()||[]].map(record=>({targetId:record.id,device:record.device.id,url:record.url,width:record.device.width,height:record.device.height,dpr:record.device.dpr,mobile:record.device.mobile,landscape:record.device.id!=='custom' && devices.find(d=>d.id===record.device.id)?.width!==record.device.width}))} : request.capture ? await screenshot(request.capture,request.skin===true) : request.status ? {status:'state',build:loadedBuild,protocol:9,enabled:linked,reason:linker.reason,previewCount:sessions.size} : request.link !== undefined ? {status:'linked', enabled:linked, reason:linker.reason} : request.ping ? {status:'ok',protocol:9,build:loadedBuild} : request.closeTarget ? await closeOnePreview(request.closeTarget) : request.close ? await closePreview() : request.inspect ? await inspectPreview(request.targetId) : await preview(request);
           client.end(JSON.stringify(result) + '\n');
         } catch (error) { client.end(JSON.stringify({status:'error', error:error.message}) + '\n'); }
       });
@@ -394,6 +396,13 @@ async function serve(state, headless) {
       expression:'({width:innerWidth,height:innerHeight,dpr:devicePixelRatio,touch:navigator.maxTouchPoints,phone:matchMedia("(max-width:500px)").matches,url:location.href})', returnByValue:true
     }, sessionId);
     return {...result.result.value,jpegActive:jpegSessions.has(sessionId),fallbackPeerCount:host?.records.get(targetId)?.jpegPeers?.size || 0};
+  }
+  async function closeOnePreview(targetId) {
+    const session=sessions.get(targetId);
+    sessions.delete(targetId);captureWindows.delete(targetId);jpegSessions.delete(session);frameDeadlines.delete(session);linker.remove(session);host?.remove(targetId);
+    for(const [viewer,id] of viewerTargets)if(id===targetId){viewerTargets.delete(viewer);await viewerCdp.send('Target.closeTarget',{targetId:viewer}).catch(()=>{});}
+    await cdp.send('Target.closeTarget',{targetId}).catch(()=>{});
+    return {status:'closed'};
   }
   async function closePreview() {
     viewerTargets.clear();
@@ -438,7 +447,7 @@ async function main() {
   const socket = join(state, 'controller.sock'); let response;
   try {
     const running=await rpc(socket,{ping:true});
-    if(running.protocol!==8&&!opts.close)throw new Error('ScreenHop was updated. Save your work, close all ScreenHop previews, wait 35 seconds, then reopen them to activate the update.');
+    if(![8,9].includes(running.protocol)&&!opts.close)throw new Error('ScreenHop was updated. Save your work, close all ScreenHop previews, wait 35 seconds, then reopen them to activate the update.');
     response = await rpc(socket, opts);
   } catch (error) {
     if (!['ENOENT','ECONNREFUSED'].includes(error.code)) throw error;

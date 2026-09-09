@@ -11,6 +11,7 @@ import sys
 import tempfile
 
 source = Path(sys.argv[1])
+release_version = json.loads((source / "manifest.json").read_text())["version"]
 with tempfile.TemporaryDirectory(prefix="screenhop-install-smoke-") as temporary:
     root = Path(temporary)
     config = root / "config"
@@ -54,13 +55,16 @@ with tempfile.TemporaryDirectory(prefix="screenhop-install-smoke-") as temporary
         ]
         assert len(discoverable) == 1, discoverable
         assert discoverable[0].parent == plugins / "arkane.screenhop"
-        assert json.loads(discoverable[0].read_text())["version"] == "1.0.0"
+        assert json.loads(discoverable[0].read_text())["version"] == release_version
 
     assert (root / "commands.log").read_text().splitlines().count("restart shell") == 1
     assert not (plugins / "arkane.screenhop/phone-remote.mjs").exists()
     assert not (plugins / "arkane.screenhop/phone-firewall.mjs").exists()
     assert len(json.loads((plugins / "arkane.screenhop/devices.json").read_text())) == 103
     installed = plugins / "arkane.screenhop"
+    for name in ("independent-browser.mjs", "native-launch.mjs", "native-chromium.mjs", "native-switch.mjs", "native/Preview.qml", "native/main.cpp", ".native/screenhop-native"):
+        assert (installed / name).read_bytes() == (source / name).read_bytes(), name
+    subprocess.run(["node", "--input-type=module", "-e", "import {buildIdentity} from './build.mjs'; console.log(await buildIdentity())"], cwd=installed, check=True)
     assert (installed / "skin-assets.mjs").is_file()
     assert (installed / "docs/DEVICE_SOURCES.md").is_file()
     for device in json.loads((installed / "devices.json").read_text()):
@@ -72,12 +76,18 @@ with tempfile.TemporaryDirectory(prefix="screenhop-install-smoke-") as temporary
     backups = list((state / "omarchy/plugin-backups").glob("*/plugin/manifest.json"))
     assert len(backups) == 3, backups
     assert sorted(json.loads(path.read_text())["version"] for path in backups) == [
-        "0.1.0", "1.0.0", "1.0.0",
+        "0.1.0", "1.0.0", release_version,
     ]
     assert sorted((path.parent / "preserved-marker").read_text() for path in backups) == [
         "0.1.0", "1.0.0", "1.0.0",
     ]
     assert not list(plugins.glob("arkane.screenhop.backup.*"))
 
-print("PASS: repeated installs preserve backups outside discovery and expose only ScreenHop 1.0.0")
+    environment['XDG_CONFIG_HOME'] = str(root / 'fresh-config')
+    subprocess.run(['bash', str(source / 'scripts/install.sh')], env=environment, check=True)
+    fresh = root / 'fresh-config/omarchy/plugins/arkane.screenhop'
+    assert (fresh / '.native/screenhop-native').is_file()
+    assert (fresh / 'independent-browser.mjs').is_file()
+
+print("PASS: clean and repeated installs preserve backups outside discovery and expose only the current ScreenHop version")
 PY

@@ -42,6 +42,8 @@ if (args[0] === '--status') {
 }
 JS
 cp "$test_dir/viewport.mjs" "$test_dir/native-preview.mjs"
+cp "$test_dir/viewport.mjs" "$test_dir/native-switch.mjs"
+cp "$test_dir/viewport.mjs" "$test_dir/independent-browser.mjs"
 # A real Wayland session is required by Omarchy's KeyboardPanel component.
 timeout 15 quickshell -p "$test_dir" --no-color 2>&1 | tee "$test_dir/output.log"
 rg -q 'PASS ScreenHop catalog' "$test_dir/output.log"

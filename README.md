@@ -6,7 +6,7 @@ Built for developers testing responsive websites. See how your site adapts acros
 
 Link supported interactions across previews and save screenshots or short recordings to share what you find. No browser extension, npm setup, or cloud account required.
 
-**Version 1.0.0 · 103 presets · Custom viewports · MIT-licensed code**
+**Version 1.0.1 · 103 presets · Custom viewports · MIT-licensed code**
 
 - **Spot layout problems sooner.** Compare multiple device sizes in centered, borderless preview windows.
 - **Repeat less, compare more.** Optionally link matching clicks, text input, scrolling and supported navigation across previews.
@@ -58,7 +58,7 @@ Clicks match visible unique semantic labels and text, with generated IDs as a la
 
 ## First-release scope
 
-ScreenHop 1.0.0 runs its device previews on your desktop. Phone remote control, QR pairing, LAN sharing, certificate setup and firewall automation are not included. Phone and tablet presets still provide responsive layouts and touch-input emulation inside desktop preview windows.
+ScreenHop 1.0.1 runs its device previews on your desktop. Phone remote control, QR pairing, LAN sharing, certificate setup and firewall automation are not included. Phone and tablet presets still provide responsive layouts and touch-input emulation inside desktop preview windows.
 
 The preview HTTP/WebSocket control listener and browser debugging endpoints are loopback-only. Screenshots, recordings, linked interactions and saved workspaces remain available locally. Websites loaded in previews still use their normal network connections.
 
@@ -67,6 +67,7 @@ The preview HTTP/WebSocket control listener and browser debugging endpoints are 
 - Omarchy shell / Quickshell with third-party widgets and current Hyprland Lua dispatchers.
 - Node.js 22.4 or later with built-in WebSocket support.
 - Chromium, or a Chromium-based executable selected with SCREENHOP_BROWSER.
+- For building optional native previews: a C++ compiler, pkg-config, Qt6 WebEngine/Quick/Network development files, libX11 and libXext; XWayland and flock are required at runtime.
 
 No npm installation or browser extension is needed. The MIT-licensed ws library is bundled for event delivery.
 
@@ -82,7 +83,7 @@ The widget appears at the right of the bar. The installer keeps backups outside 
 
 ### Removal
 
-Finish any unsaved preview work, then stop both preview modes before removing the plugin:
+Finish any unsaved preview work and close experimental native windows using the window manager, then stop the other preview modes before removing the plugin:
 
 ```sh
 node ~/.config/omarchy/plugins/arkane.screenhop/viewport.mjs --close
@@ -170,3 +171,17 @@ ScreenHop code and its original preview artwork are MIT licensed. Adapted Playwr
 Preview events and video signaling responses use authenticated WebSockets, avoiding the HTTP connection-pool exhaustion that previously stalled the sixth preview. WebRTC still carries video; validated HTTP endpoints still carry input and control requests. Seven simultaneous desktop previews are covered by an isolated small-viewport regression; actual device count and performance depend on website complexity and hardware.
 
 For a Git-managed install, use `omarchy plugin update arkane.screenhop` to fetch updates, then **Workspace and tools → Check build → Apply update** to reopen existing previews with the new controller. Finish unsaved work before applying. Copied local installs must rerun their installer.
+
+## Experimental native previews (1.0.1)
+
+Version 1.0.1 adds opt-in **Native previews (experimental)**. WebRTC remains the default. Native previews embed system Chromium inside device skins and retain separate per-device browser profiles. See [local setup and limitations](LOCAL_BROWSER_TEST.md). Build and install a downloaded source release with `bash scripts/install.sh`. For an Omarchy-managed installation, build the optional host after installing or updating:
+
+```sh
+bash ~/.config/omarchy/plugins/arkane.screenhop/scripts/build-native.sh
+```
+
+Install the build dependencies first (Arch package names: `base-devel`, `pkgconf`, `qt6-base`, `qt6-declarative`, `qt6-webengine`, `libx11`, `libxext`; runtime also needs `xorg-xwayland` and `util-linux`). The script does not install packages. WebRTC works without this optional host. Enable **Native previews (experimental)** in the picker after building. Native preview windows must be closed and reopened after updates.
+
+New tabs keep device emulation but use separate browser windows without skins. Switching to linked WebRTC requires confirmation and reopens pages; unsaved state and sign-ins do not transfer. Workspace saving and batch screenshots are disabled in native mode. Use the desktop screenshot tool for native captures. This is Chromium emulation, not a physical-device or Safari emulator; Cloudflare compatibility and performance gains are not guaranteed.
+
+Native profiles are retained under `$XDG_STATE_HOME/screenhop/native` (normally `~/.local/state/screenhop/native`). Each device configuration uses its own reusable profile slots. Profiles are separate from WebRTC, so sign-ins and browser extensions may need setup in each profile. No measured speedup or reduced memory use is promised: the local QA probe used approximately 583 MiB for one preview and 2.1 GiB for four.

@@ -1,21 +1,23 @@
-# ScreenHop 1.0.0 validation
+# ScreenHop 1.0.1 validation
 
-## Desktop-only release
+## Final exported release checks
 
-Phone remote control is removed from the release tree, CLI, picker, viewer input bridge, build identity and export manifest. Its TLS test helper and standalone remote/firewall tests are removed. The installer backs up an older installation and removes its retired phone-sharing modules. Desktop preview control binds to `127.0.0.1`; the controller uses a private Unix socket. Controller protocol 8 prevents new commands from silently using an older running controller.
+The exported 1.0.1 source package completed the full serial Node regression suite: **67 tests, 66 passed, 0 failed, 1 intentionally skipped** (vendor image assets are absent from the public package). The previously intermittent WebRTC touch test passed in this run. UI smoke, clean and repeated installation smoke, plugin validation, JavaScript syntax checks and `git diff --check` also passed. Source-only build identity works without a compiled native host. Native sources and build scripts are included in the export; executable output and profiles are excluded.
 
-README.md, CHANGELOG.md, PLAN.md and both publication/listing guides describe the first-release scope. The main screenshot now uses the existing side-by-side device image, so it does not advertise the removed phone-sharing button.
+## Earlier local regression evidence
 
-## Passed checks
+The pre-release review ran 67 tests: 64 passed initially, two failed, and one vendor-image skin test was intentionally skipped. Native parity failed to launch during a concurrent rebuild; atomic native executable replacement fixes that race. A 328-sample rebuild check preserved executable availability. The WebRTC touch viewer timed out once; it passed on targeted rerun, but the intermittent timeout has not been conclusively diagnosed. Both failed test files passed on recheck.
 
-- 43 tests across auth-policy, event-sockets, multi-preview, rtc-signaling, rtc-viewer, screenshot, touch-input, touch-viewer, viewer and workspaces. Covers seven simultaneous desktop WebRTC previews, real input, signaling authentication and cleanup, touch gestures, screenshots, viewport geometry, linked previews and sign-in isolation.
-- `bash tests/install-smoke.sh`: repeated installs preserve backups, remove obsolete remote/firewall modules and expose one plugin.
-- `bash tests/ui-smoke.sh`: simplified picker, catalog/search, frame/native launches, custom dimensions, linking and authentication pause.
-- `omarchy plugin validate .`: manifest and compatibility validation.
-- Exported package passes plugin validation and installer smoke; no phone-sharing modules or TLS test helpers are present, and validation notes are preserved.
-- Removed `--phone` and `--phone-status` CLI options reject before starting a controller.
-- `node --check viewport.mjs`, `node --check capture-ui.js` and `git diff --check`.
+Eight native/WebRTC comparisons matched the tested fields: iPhone SE portrait, iPhone SE without viewport metadata, iPhone SE landscape, desktop 1920 × 1080, iPhone X, Pixel 11, Galaxy S26 Ultra and iPad Pro 11 landscape. Metrics include layout/screen dimensions, visual viewport width, DPR, orientation, touch/pointer capabilities and request identity. This does not prove identical pixels, physical-device fidelity or Safari behavior.
 
-The auth-policy test harness was corrected to notify both registered mutation observers with a records array, matching browser behavior; the production authentication policy was unchanged.
+Coverage includes native input at enlarged edges, keyboard/scrolling, profile cookie persistence, popup emulation, linked routing, failed-switch rollback, authentication guards and controller compatibility. UI and clean/repeated installation smoke checks passed during local review.
 
-Marketplace revalidation is paused for local review. After publication resumes, the final full default-branch commit must match both the new validation report and security baseline. These local regressions are not a marketplace attestation or security audit.
+A local static-page probe after 20 seconds used about 583 MiB PSS for one preview and 2,120 MiB for four. One-preview CPU sampled about 2.16% of one core; the four-preview CPU sample was invalid because processes exited between samples. No owned processes remained after closing. This is not a WebRTC performance comparison.
+
+## Release scope and security
+
+Native previews remain opt-in publicly. They embed system Chromium through XWayland, with a private Unix control socket and inherited-pipe browser debugging. A temporary loopback bootstrap serves an empty local page. The skin host loads local UI. The existing WebRTC path retains authenticated loopback control. Phone sharing, LAN listeners and firewall/pkexec helpers remain excluded.
+
+Browser profiles and cookies remain local and are not packaged. Native and WebRTC profiles are separate. Popups have no skins; native workspace and batch capture tools are unavailable. Cloudflare acceptance and speedups are not guaranteed.
+
+The public export includes native source/build files and original CSS frames, excludes native binaries, private state, local vendor artwork and development Git history. Marketplace validation and its security baseline must be rerun against the final full default-branch commit. Local tests and this document are not Marketplace attestations or a security audit.

@@ -1,3 +1,18 @@
+# ScreenHop 1.0.1
+
+- Add optional **Native previews (experimental)**: system Chromium embedded inside the original device skins, with persistent per-device profiles. WebRTC remains the default and handles linked previews.
+- Keep device viewport, DPR and input settings while scaling the skin and webpage proportionally. Prevent trackpad pinch from zooming the outer skin separately; remove the embedded fullscreen-exit banner.
+- Apply device emulation to new tabs, preserve popup opener relationships, and wait for browser shutdown so profile changes can flush. Popups remain separate, unskinned windows.
+- Add confirmed switching to linked WebRTC, rollback of failed replacements, authentication guards and compatibility with older running controllers for normal launches.
+- Stop status polling from making preview controls blink. Show a steady experimental indicator and disable unsupported native workspace tools.
+- Ship native build sources, dependency instructions and atomic executable replacement during builds and installation.
+
+Native mode has separate sign-ins from WebRTC, no workspace/batch capture tools, and a substantial memory cost per preview. It remains Chromium emulation; Safari fidelity, Cloudflare acceptance and performance gains are not guaranteed. See [native release details](docs/NATIVE_RELEASE_NOTES.md) and [validation](VALIDATION.md).
+
+Close native windows before rebuilding after an update. Git-managed installs can build the optional host with `bash ~/.config/omarchy/plugins/arkane.screenhop/scripts/build-native.sh`. Phone remote control remains excluded.
+
+---
+
 # ScreenHop 1.0.0
 
 First public release: responsive website testing in simultaneous desktop preview windows.

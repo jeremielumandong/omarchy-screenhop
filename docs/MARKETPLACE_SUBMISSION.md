@@ -31,11 +31,13 @@ ScreenHop is built for responsive development, layout reviews and documenting bu
 
 ### Requirements and practical limits
 
+Optional native previews require a C++ compiler, pkg-config, Qt6 WebEngine/Quick/Network development files, libX11, libXExt, XWayland and flock; build instructions are in README.md. Native previews retain separate profiles, and workspace/capture tools require WebRTC.
+
 Requires an Omarchy shell with third-party plugins, Quickshell, Hyprland, Node.js 22.4+ with built-in WebSocket, and Chromium or a configured compatible browser. No npm dependencies or browser extension.
 
 These are Chromium previews, not real devices, Safari or mobile OS emulators. Presets derived from physical specifications are marked approximate. Linking skips unsupported or ambiguous controls, and authentication detection is not a guarantee for every provider. Native browser dialogs and file workflows are available through direct browser mode. Recordings are silent and limited to three minutes or 128 MB.
 
-This first release is desktop-only: phone remote control, QR pairing, LAN listeners, certificate setup and firewall automation are excluded. Preview control and browser debugging stay on loopback. Installation, removal and retained browser profiles are documented in README.md.
+This release is desktop-only: phone remote control, QR pairing, LAN listeners, certificate setup and firewall automation are excluded. Preview control and browser debugging stay on loopback. Installation, removal and retained browser profiles are documented in README.md.
 
 MIT covers ScreenHop code and original CSS frames. Adapted Playwright device data includes its Apache-2.0 license and notice. The public package excludes standalone Samsung emulator asset files. The author-supplied screenshots show a local Galaxy skin setup, as identified in the README.
 
@@ -56,4 +58,4 @@ Confirm these in the marketplace form when submitting:
 
 Existing submission: https://github.com/omacom/omarchy-plugin-marketplace/issues/5799
 
-When publication resumes, update this existing issue with the final full commit and request fresh validation and security-baseline reports.
+For 1.0.1, use the [verification form](https://github.com/omacom/omarchy-plugin-marketplace/issues/new?template=verify-plugin.yml), choose **Verify and publish a newer upstream commit**, and provide `arkane.screenhop`, the repository root URL and the final full HEAD. This runs fresh compatibility validation and the security baseline for maintainer approval. The existing listing snapshot stays unchanged until promotion.

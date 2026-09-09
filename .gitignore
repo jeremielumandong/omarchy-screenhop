@@ -7,3 +7,5 @@ browser/
 __pycache__/
 *.pyc
 dist/
+
+.native/

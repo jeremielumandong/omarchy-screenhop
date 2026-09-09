@@ -84,8 +84,18 @@ ShellRoot {
                 widget.deviceFrame = false;
                 widget.customMobile = false;
                 widget.launchCustom();
-            } else {
+            } else if (stage === 10) {
                 check(!widget.launchError, "Custom native launch failed: " + widget.launchError);
+                widget.independentBrowser = true;
+                widget.refreshLinked();
+            } else if (stage === 11) {
+                check(!widget.launchError && !widget.linked, "Experimental status failed");
+                widget.workspaceAction(["--save", "test"]);
+                check(widget.launchError.indexOf("WebRTC") >= 0, "Native workspace must be explicitly unsupported");
+                widget.customMobile = true;
+                widget.launchCustom();
+            } else {
+                check(!widget.launchError, "Experimental launch failed: " + widget.launchError);
                 console.log("PASS ScreenHop catalog, search, frame/native launches, linked toggle, auth pause and panel creation");
                 widget.close();
                 Qt.quit();

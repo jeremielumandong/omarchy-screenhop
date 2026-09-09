@@ -8,7 +8,7 @@ import qs.Ui
 BarWidget {
     id: root
     moduleName: "arkane.screenhop"
-    Component.onCompleted: console.info("ScreenHop 1.0.0 widget loaded:", pluginDirectory, "initial URL:", website)
+    Component.onCompleted: console.info("ScreenHop 1.0.1 widget loaded:", pluginDirectory, "initial URL:", website)
     property bool toolsExpanded: false
     property var workspaceNames: []
     property string workspaceName: ""
@@ -29,11 +29,13 @@ BarWidget {
     property string website: "https://omarchy.org"
     property bool landscape: false
     property bool deviceFrame: true
+    property bool independentBrowser: setting("nativePreviews", false)
+    property bool legacyController: false
     property bool linked: false
     property bool pendingLinked: false
     property bool launchReplyReceived: false
     property bool linkReplyReceived: false
-    readonly property string helperName: deviceFrame ? "viewport.mjs" : "native-preview.mjs"
+    readonly property string helperName: independentBrowser || deviceFrame ? "viewport.mjs" : "native-preview.mjs"
     property string selectedId: ""
     property string status: "Choose a device to open a browser preview."
     property string launchError: ""
@@ -78,7 +80,7 @@ BarWidget {
         launchError = "";
         status = "Opening " + device.name + "…";
         launchReplyReceived = false;
-        var args = ["node", pluginDirectory + helperName, "--device", device.id, "--url", website.trim()];
+        var args = ["node", pluginDirectory + (independentBrowser && !linked ? "independent-browser.mjs" : helperName), "--device", device.id, "--url", website.trim()];
         if (device.id === "custom") {
             args.push("--width", String(device.width), "--height", String(device.height), "--dpr", String(device.dpr));
             if (device.mobile) args.push("--mobile");
@@ -93,7 +95,7 @@ BarWidget {
         pendingLinked = linked;
         linkReplyReceived = false;
         launchError = "";
-        linkUpdater.command = ["node", pluginDirectory + helperName, "--status"];
+        linkUpdater.command = ["node", pluginDirectory + (independentBrowser ? "native-switch.mjs" : helperName), "--status"];
         linkUpdater.running = true;
     }
     function setLinked(value) {
@@ -101,8 +103,30 @@ BarWidget {
         pendingLinked = value;
         linkReplyReceived = false;
         launchError = "";
-        linkUpdater.command = ["node", pluginDirectory + helperName, "--link", value ? "on" : "off"];
+        linkUpdater.command = ["node", pluginDirectory + (independentBrowser ? "native-switch.mjs" : helperName), "--link", value ? "on" : "off"];
         linkUpdater.running = true;
+    }
+    Timer {
+        interval: 1000; repeat: true; running: root.opened && root.independentBrowser && !root.legacyController
+        onTriggered: {
+            if (root.busy || statusPoll.running) return;
+            statusPoll.command = ["node", root.pluginDirectory + "native-switch.mjs", "--status"];
+            statusPoll.running = true;
+        }
+    }
+    // Background checks must not dim controls or replace the user's status message.
+    Process {
+        id: statusPoll
+        stdout: SplitParser {
+            onRead: data => {
+                if (root.busy) return;
+                try {
+                    var message = JSON.parse(data);
+                    if (message.protocol !== undefined) root.legacyController = message.protocol < 9;
+                    if (typeof message.enabled === "boolean") root.linked = message.enabled;
+                } catch (error) { /* Keep the previous state on a failed background check. */ }
+            }
+        }
     }
     FileView {
         path: root.pluginDirectory + "devices.json"
@@ -121,6 +145,7 @@ BarWidget {
             onRead: data => {
                 try {
                     var message = JSON.parse(data);
+                    if (message.protocol !== undefined) root.legacyController = message.protocol < 9;
                     if (message.status === "ready") {
                         root.launchReplyReceived = true;
                         if (typeof message.linked === "boolean") root.linked = message.linked;
@@ -144,6 +169,7 @@ BarWidget {
             onRead: data => {
                 try {
                     var message = JSON.parse(data);
+                    if (message.protocol !== undefined) root.legacyController = message.protocol < 9;
                     var enabled = typeof message.enabled === "boolean" ? message.enabled : message.linked;
                     if (typeof enabled === "boolean") {
                         root.pendingLinked = enabled;
@@ -168,6 +194,7 @@ BarWidget {
     }
     function workspaceAction(args) {
         if (busy) return;
+        if (independentBrowser) { launchError = "Workspace tools currently support WebRTC previews only. Turn off native previews to use them."; return; }
         launchError = "";
         workspaceRunner.command = ["node", pluginDirectory + "workspaces.mjs"].concat(args);
         workspaceRunner.running = true;
@@ -178,6 +205,7 @@ BarWidget {
             onRead: data => {
                 try {
                     var message = JSON.parse(data);
+                    if (message.protocol !== undefined) root.legacyController = message.protocol < 9;
                     if (message.names) root.workspaceNames = message.names;
                     if (message.message) root.status = message.message;
                     if (message.status === "build") {
@@ -263,12 +291,31 @@ BarWidget {
                 width: parent.width
                 spacing: Style.space(8)
                 Button {
+                    text: root.independentBrowser ? "● Native previews (experimental)" : "Native previews (experimental)"
+                    selected: root.independentBrowser
+                    bordered: true
+                    focusable: true
+                    enabled: !root.busy
+                    onClicked: root.independentBrowser = !root.independentBrowser
+                }
+            }
+            Label {
+                width: parent.width
+                visible: root.independentBrowser
+                text: "Unlinked previews use system Chromium directly inside device skins. Link previews switches to WebRTC after confirmation. Pages reopen; unsaved state and sign-in sessions cannot transfer."
+                wrapMode: Text.WordWrap
+                font.pixelSize: Style.font.bodySmall
+            }
+            Row {
+                width: parent.width
+                spacing: Style.space(8)
+                Button {
                     id: frameButton
                     text: root.deviceFrame ? "✓ Device frame" : "Device frame"
                     selected: root.deviceFrame
                     bordered: true
                     focusable: true
-                    enabled: !root.busy
+                    enabled: !root.busy && !root.independentBrowser
                     onClicked: {
                         root.deviceFrame = !root.deviceFrame;
                         root.refreshLinked();
@@ -277,7 +324,7 @@ BarWidget {
                 Label {
                     width: parent.width - frameButton.width - parent.spacing
                     anchors.verticalCenter: parent.verticalCenter
-                    text: root.deviceFrame ? "Framed device preview" : "Direct browser window"
+                    text: root.independentBrowser ? "Skins are controlled inside native previews" : root.deviceFrame ? "Framed device preview" : "Direct browser window"
                     font.pixelSize: Style.font.bodySmall
                     opacity: 0.65
                 }
@@ -329,12 +376,13 @@ BarWidget {
                     width: scroll.width
                     spacing: Style.space(18)
                     Button {
-                        text: root.toolsExpanded ? "− Workspace and tools" : "+ Workspace and tools"
-                        bordered: true; focusable: true; enabled: !root.busy
+                        text: root.independentBrowser ? "Workspace tools require WebRTC previews" : root.toolsExpanded ? "− Workspace and tools" : "+ Workspace and tools"
+                        bordered: true; focusable: true;
+                        enabled: !root.busy && !root.independentBrowser
                         onClicked: { root.toolsExpanded = !root.toolsExpanded; if (root.toolsExpanded) root.workspaceAction(["--list"]); }
                     }
                     Column {
-                        visible: root.toolsExpanded
+                        visible: root.toolsExpanded && !root.independentBrowser
                         width: parent.width
                         spacing: Style.space(8)
                         Label { width: parent.width; text: "Save your open framed previews, or reopen a saved device set. URLs and device choices are saved; sign-in sessions are not exported."; font.pixelSize: Style.font.bodySmall }
@@ -355,7 +403,7 @@ BarWidget {
                             Button { text: root.batchSkin ? "✓ Include skin" : "Page only"; selected: root.batchSkin; bordered: true; focusable: true; enabled: !root.busy; onClicked: root.batchSkin = !root.batchSkin }
                             Button { text: "Screenshot all"; bordered: true; focusable: true; enabled: !root.busy && root.deviceFrame; onClicked: root.workspaceAction(root.batchSkin ? ["--batch"] : ["--batch", "--page-only"]) }
                         }
-                        Label { width: parent.width; text: "ScreenHop 1.0.0 · " + (root.buildStatus || "Check the running build before applying an update."); font.pixelSize: Style.font.bodySmall }
+                        Label { width: parent.width; text: "ScreenHop 1.0.1 · " + (root.buildStatus || "Check the running build before applying an update."); font.pixelSize: Style.font.bodySmall }
                         Row {
                             spacing: Style.space(6)
                             Button { text: "Check build"; bordered: true; focusable: true; enabled: !root.busy; onClicked: root.workspaceAction(["--status"]) }
