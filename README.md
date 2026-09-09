@@ -1,12 +1,25 @@
-# ScreenHop 1.0.0
+# ScreenHop
 
-Pick a device. Open its browser preview. Link your screens.
+**Preview your website across multiple devices—side by side, right from Omarchy.**
 
-ScreenHop 1.0.0 · MIT-licensed code · Chromium device previews.
+Built for developers testing responsive websites. See how your site adapts across phones, tablets, foldables and desktop layouts in multiple simultaneous views. ScreenHop turns your Omarchy bar into a responsive testing workspace: choose a URL, pick your devices, and start comparing.
 
-ScreenHop is an Omarchy shell plugin with 103 searchable presets and custom viewport sizes. Each selection opens a separate preview at the device's CSS dimensions.
+Link supported interactions across previews, use your phone to control a selected preview, and save screenshots or short recordings to share what you find. No browser extension, npm setup, or cloud account required.
 
-![ScreenHop centered device preview](preview.png)
+**Version 1.0.0 · 103 presets · Custom viewports · MIT-licensed code**
+
+- **Spot layout problems sooner.** Compare multiple device sizes in centered, borderless preview windows.
+- **Repeat less, compare more.** Optionally link matching clicks, text input, scrolling and supported navigation across previews.
+- **Put testing in your hand.** Pair a phone over local Wi-Fi with a QR code and drive a selected preview—or a linked group.
+- **Show the issue clearly.** Export PNGs or silent recordings, with the frame included or the page on its own.
+- **Return to your testing workspace.** Save sets of devices and URLs, reopen them, and capture every preview in a batch.
+- **Choose how hard it works.** WebRTC previews offer Auto, Eco and Smooth modes, with JPEG fallback and live diagnostics.
+
+![ScreenHop device picker and responsive previews](preview.png)
+
+![ScreenHop side-by-side foldable and phone previews](docs/images/device-previews.png)
+
+Screenshots show the author's local setup with separately supplied Galaxy artwork. The public package includes ScreenHop's original decorative frames.
 
 ## Device previews
 
@@ -117,7 +130,7 @@ bash tests/install-smoke.sh
 
 Browser tests require local browser/socket access. The QML test requires a Wayland session. See [VALIDATION.md](VALIDATION.md) for results.
 
-Repository: [jeremielumandong/omarchy-screenhop](https://github.com/jeremielumandong/omarchy-screenhop). Publication preparation and listing text are in [PUBLICATION.md](docs/PUBLICATION.md).
+Repository: [jeremielumandong/omarchy-screenhop](https://github.com/jeremielumandong/omarchy-screenhop). Publication details are in [PUBLICATION.md](docs/PUBLICATION.md); the marketplace listing draft is in [MARKETPLACE_SUBMISSION.md](docs/MARKETPLACE_SUBMISSION.md).
 
 Device presets are informed by [Playwright's descriptors](https://github.com/microsoft/playwright/blob/v1.51.1/packages/playwright-core/src/server/deviceDescriptorsSource.json). Viewport emulation uses the [Chrome DevTools Protocol](https://chromedevtools.github.io/devtools-protocol/tot/Emulation/).
 
@@ -157,4 +170,4 @@ The 103 presets include current iPhone, Galaxy, Pixel and other Android families
 
 The public package uses ScreenHop's original decorative frames. Samsung-provided emulator PNG artwork is excluded; local development installations may contain separately supplied artwork. Manufacturer names identify test presets and do not imply endorsement.
 
-ScreenHop code and its original preview artwork are MIT licensed. Adapted Playwright device descriptors retain Apache-2.0 licensing and notices; see [third-party notices](THIRD_PARTY_NOTICES.md). The marketplace preview uses an original ScreenHop demonstration page and original CSS frame.
+ScreenHop code and its original preview artwork are MIT licensed. Adapted Playwright device descriptors retain Apache-2.0 licensing and notices; see [third-party notices](THIRD_PARTY_NOTICES.md). The preview screenshots were supplied by the author and show ScreenHop displaying omarchy.org, including the author’s local Galaxy skin setup.

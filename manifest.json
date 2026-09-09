@@ -4,7 +4,7 @@
   "name": "ScreenHop",
   "version": "1.0.0",
   "author": "arkane",
-  "description": "Test responsive websites in device previews with linked browsing, screenshots and phone control.",
+  "description": "Preview your website across multiple devices, side by side. Responsive testing for developers on Omarchy.",
   "kinds": [
     "bar-widget"
   ],

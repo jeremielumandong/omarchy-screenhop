@@ -14,6 +14,9 @@ for folder in ['scripts','tests','third_party']:
   if p.is_file() and '__pycache__' not in p.parts and p.name!='skin-viewer.test.mjs':
    dest=target/p.relative_to(source);dest.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(p,dest)
 (target/'docs').mkdir()
+if (source/'docs/images/device-previews.png').is_file():
+ (target/'docs/images').mkdir()
+ shutil.copy2(source/'docs/images/device-previews.png',target/'docs/images/device-previews.png')
 for name in ['DEVICE_SOURCES.md','PUBLICATION.md','MARKETPLACE_SUBMISSION.md']:
  shutil.copy2(source/'docs'/name,target/'docs'/name)
 devices=json.loads((source/'devices.json').read_text())
