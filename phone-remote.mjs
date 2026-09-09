@@ -1,28 +1,50 @@
 import {attachEventSockets} from './event-sockets.mjs';
 import {serveSkinAsset} from './skin-assets.mjs';
 import {readFile} from 'node:fs/promises';
-import {createServer} from 'node:http';
-import {randomBytes} from 'node:crypto';
-import {networkInterfaces as systemInterfaces} from 'node:os';
+import {createServer} from 'node:https';
+import {randomBytes,X509Certificate} from 'node:crypto';
+import {createSecureContext} from 'node:tls';
+import {isIP} from 'node:net';
+import {homedir} from 'node:os';
+import {join,isAbsolute} from 'node:path';
 import {execFileSync} from 'node:child_process';
 import {inputCommand,rtcMessage,actionMessage} from './preview-host.mjs';
 
 const escapeHTML=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 
-// An explicitly enabled, revocable LAN controller. It only exposes the framed
-// preview API; the desktop control token and browser debugging port stay private.
+// Trust is provisioned outside pairing: the phone must already trust the issuer
+// and the configured hostname must resolve to this desktop. Never auto-generate
+// an untrusted certificate or offer a plaintext/certificate-warning fallback.
+export async function loadPhoneTLS({configPath=process.env.SCREENHOP_PHONE_TLS_CONFIG||join(process.env.XDG_CONFIG_HOME||join(homedir(),'.config'),'screenhop','phone-tls.json')}={}) {
+  let config;
+  try {config=JSON.parse(await readFile(configPath,'utf8'));}
+  catch {throw new Error('Phone remote requires trusted HTTPS. Configure screenhop/phone-tls.json as described in README before enabling sharing.');}
+  if(!config||typeof config.hostname!=='string'||typeof config.certFile!=='string'||typeof config.keyFile!=='string'||!isAbsolute(config.certFile)||!isAbsolute(config.keyFile))
+    throw new Error('Phone TLS configuration requires hostname and absolute certFile/keyFile paths.');
+  try {return {hostname:config.hostname,cert:await readFile(config.certFile),key:await readFile(config.keyFile)};}
+  catch {throw new Error('Cannot read the configured phone TLS certificate or private key.');}
+}
+
+// An explicitly enabled, revocable HTTPS controller. The desktop control token
+// and browser debugging port stay private. Each enable creates a new credential.
 export class PhoneRemote {
-  static async create({host,networkInterfaces=systemInterfaces,port=53318}) {
+  static async create({host,port=53318,tls}) {
     if(!Number.isInteger(port)||port<0||port>65535)throw new Error('Phone remote port must be between 0 and 65535.');
+    tls=tls||await loadPhoneTLS();
+    const hostname=typeof tls.hostname==='string'?tls.hostname.toLowerCase():tls.hostname;
+    if(typeof hostname!=='string'||hostname.length>253||!hostname.split('.').every(label=>/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$/.test(label)))
+      throw new Error('Phone TLS hostname must be a DNS name or IPv4 address without a port or URL.');
+    try {
+      const certificate=new X509Certificate(tls.cert);
+      const matches=isIP(hostname)?certificate.checkIP(hostname):certificate.checkHost(hostname,{subject:'never'});
+      if(!matches||Date.now()<Date.parse(certificate.validFrom)||Date.now()>=Date.parse(certificate.validTo))throw new Error('Invalid identity');
+      createSecureContext({key:tls.key,cert:tls.cert,minVersion:'TLSv1.2'});
+    } catch {throw new Error('Phone TLS certificate must be current, match the configured hostname, and match its private key.');}
     const remote=new PhoneRemote();
     remote.host=host; remote.token=randomBytes(32).toString('hex');
     remote.sockets=new Set(); remote.streams=new Map(); remote.peers=new Map(); remote.pendingSignals=new Set(); remote.enabled=true;
-    const interfaces=typeof networkInterfaces==='function'?networkInterfaces():networkInterfaces;
-    // Prefer physical Wi-Fi, then Ethernet, before VPNs and container bridges.
-    const priority=name=>/^(wl|wlan|wifi)/i.test(name)?0:/^(en|eth)/i.test(name)?1:/^(docker|br|veth|virbr|tun|tap|wg|tailscale|zt)/i.test(name)?3:2;
-    const addresses=[...new Set(Object.entries(interfaces).sort(([a],[b])=>priority(a)-priority(b)).flatMap(([,items])=>items||[]).filter(item=>!item.internal&&(item.family==='IPv4'||item.family===4)).map(item=>item.address))];
-    remote.addresses=new Set(['127.0.0.1',...addresses]);
-    remote.server=createServer((req,res)=>remote.handle(req,res).catch(()=>{
+    remote.addresses=new Set([hostname]);
+    remote.server=createServer({key:tls.key,cert:tls.cert,minVersion:'TLSv1.2'},(req,res)=>remote.handle(req,res).catch(()=>{
       if(!res.headersSent)res.writeHead(400,{'Content-Type':'application/json'});
       res.end('{"error":"Invalid request"}');
     }));
@@ -42,16 +64,16 @@ export class PhoneRemote {
     remote.port=remote.server.address().port;
     remote.closeEventSockets=attachEventSockets(remote.server,req=>{
       const validHosts=new Set([...remote.addresses].map(address=>`${address}:${remote.port}`));
-      if(!remote.enabled||!validHosts.has(req.headers.host)||req.headers.origin!=='http://'+req.headers.host||req.headers['sec-fetch-site']==='cross-site')throw Error('Invalid event origin');
-      const url=new URL(req.url,'http://'+req.headers.host),prefix='/'+remote.token+'/';
+      if(!remote.enabled||!validHosts.has(req.headers.host)||req.headers.origin!=='https://'+req.headers.host||req.headers['sec-fetch-site']==='cross-site')throw Error('Invalid event origin');
+      const url=new URL(req.url,'https://'+req.headers.host),prefix='/'+remote.token+'/';
       if(!url.pathname.startsWith(prefix))throw Error('Invalid pairing');
       const match=url.pathname.slice(prefix.length).match(/^view\/([A-Za-z0-9_-]+)\/events-ws$/);
       const record=match&&remote.host.records.get(match[1]),clientId=url.searchParams.get('clientId')||'';
       if(!record||!/^[A-Za-z0-9_-]{8,80}$/.test(clientId))throw Error('Unknown viewer');
       return stream=>remote.subscribe(record,stream,clientId);
     });
-    remote.reason=addresses.length?`Use the same Wi-Fi network. If a firewall is enabled, allow TCP port ${remote.port} from your local network.`:'No LAN IPv4 address is available. Connect this computer to Wi-Fi or Ethernet, then turn Phone remote off and on.';
-    remote.urls=(addresses.length?addresses:['127.0.0.1']).map(address=>`http://${address}:${remote.port}/${remote.token}/`);
+    remote.reason=`HTTPS sharing uses TCP port ${remote.port}. The phone must trust the configured certificate; never bypass a certificate warning.`;
+    remote.urls=[`https://${hostname}:${remote.port}/${remote.token}/`];
     remote.qrData='';
     try {
       const svg=execFileSync('qrencode',['-t','SVG','-o','-',remote.urls[0]],{encoding:'utf8',timeout:2000,maxBuffer:1024*1024,stdio:['ignore','pipe','ignore']});
@@ -77,10 +99,10 @@ export class PhoneRemote {
   }
   async handle(req,res) {
     res.setHeader('Cache-Control','no-store');res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Referrer-Policy','no-referrer');
-    res.setHeader('Content-Security-Policy',`default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; media-src 'self' blob:; connect-src 'self' ws://${req.headers.host}; frame-ancestors 'none'; form-action 'none'; base-uri 'none'`);
+    res.setHeader('Content-Security-Policy',`default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; media-src 'self' blob:; connect-src 'self' wss://${req.headers.host}; frame-ancestors 'none'; form-action 'none'; base-uri 'none'`);
     const validHosts=new Set([...this.addresses].map(address=>`${address}:${this.port}`));
     if(!this.enabled||!validHosts.has(req.headers.host)){res.writeHead(403);res.end();return;}
-    const origin='http://'+req.headers.host;
+    const origin='https://'+req.headers.host;
     if(req.headers.origin&&req.headers.origin!==origin){res.writeHead(403);res.end();return;}
     if(req.headers['sec-fetch-site']==='cross-site'){res.writeHead(403);res.end();return;}
     const path=new URL(req.url,origin).pathname;

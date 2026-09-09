@@ -10,7 +10,7 @@ Link supported interactions across previews, use your phone to control a selecte
 
 - **Spot layout problems sooner.** Compare multiple device sizes in centered, borderless preview windows.
 - **Repeat less, compare more.** Optionally link matching clicks, text input, scrolling and supported navigation across previews.
-- **Put testing in your hand.** Pair a phone over local Wi-Fi with a QR code and drive a selected preview—or a linked group.
+- **Put testing in your hand.** Pair a phone over HTTPS with a QR code after configuring a trusted certificate and drive a selected preview—or a linked group.
 - **Show the issue clearly.** Export PNGs or silent recordings, with the frame included or the page on its own.
 - **Return to your testing workspace.** Save sets of devices and URLs, reopen them, and capture every preview in a batch.
 - **Choose how hard it works.** WebRTC previews offer Auto, Eco and Smooth modes, with JPEG fallback and live diagnostics.
@@ -61,11 +61,31 @@ Clicks match visible unique semantic labels and text, with generated IDs as a la
 
 ## Phone remote
 
-Open framed previews, then choose **Phone remote** in the ScreenHop picker. Scan the QR code using a phone on the same Wi-Fi, select a lead preview, and enable **Link previews** to control the group. No phone app or cloud account is needed. This uses a local browser controller; it does not integrate with the LocalSend app.
+Configure trusted HTTPS as described below, open framed previews, then choose **Phone remote** in the ScreenHop picker. Scan the QR code using a phone on the same Wi-Fi, select a lead preview, and enable **Link previews** to control the group. No phone app or cloud account is needed. This uses a local browser controller; it does not integrate with the LocalSend app.
 
 Tap to click and swipe to scroll. For typing, tap the field inside the preview, open **Keyboard**, and type using the phone keyboard helper. Authentication still pauses linking; your phone controls the selected desktop renderer without importing a phone login session.
 
-**Stop sharing** closes the listener, disconnects phones and revokes the pairing URL. ScreenHop uses TCP port **53318**. When UFW needs a rule, enabling Phone remote invokes the system password prompt to allow only the active local subnet/interface. ScreenHop never reads or stores the password. The scoped firewall rule remains for later sessions; no service listens while sharing is off. Sharing defaults off. The pairing URL grants control over these previews: use a trusted local network, since the connection uses local HTTP. Both devices must be reachable on the same network; guest Wi-Fi isolation or a firewall may block access. `qrencode` is optional; a copyable URL is always available.
+**Stop sharing** closes the listener, disconnects phones and revokes the pairing URL. ScreenHop uses TCP port **53318**. When UFW needs a rule, enabling Phone remote invokes the system password prompt to allow only the active local subnet/interface. ScreenHop never reads or stores the password. The scoped firewall rule remains for later sessions; no service listens while sharing is off. Sharing defaults off. The HTTPS pairing URL grants control over these previews and contains a random 256-bit credential generated for this sharing session. Every new sharing session gets a new credential; old URLs stop working. Keep the URL private. Pairing, preview events, input, screenshots and signaling use HTTPS/WSS (TLS 1.2 or newer); there is no HTTP/WS listener or redirect. Native WebRTC video uses its encrypted peer transport. Both devices must be reachable on the same network; guest Wi-Fi isolation or a firewall may block access. `qrencode` is optional; a copyable URL is always available.
+
+### Configure trusted HTTPS before sharing
+
+Phone remote stays unavailable until you supply a valid TLS identity. ScreenHop does not generate self-signed certificates, add trust roots, disable browser certificate verification, or fall back to plaintext. Desktop previews continue to work without this setup.
+
+1. Choose a stable DNS name resolving to the desktop on your LAN, or reserve a stable LAN IPv4 address. Obtain a server certificate whose Subject Alternative Name covers that exact name/address, with its private key and PEM certificate chain. Use a publicly trusted issuer for a domain you control, or a private CA provisioned on the phone through an authenticated channel. Verify a private CA's fingerprint independently before trusting it; never obtain trust from an unauthenticated pairing page or bypass a browser certificate warning.
+2. Store the private key outside the plugin/repository, readable only by your user (for example mode `0600` in a `0700` directory). Create `$XDG_CONFIG_HOME/screenhop/phone-tls.json` (default `~/.config/screenhop/phone-tls.json`):
+
+   ```json
+   {
+     "hostname": "screenhop.example.net",
+     "certFile": "/absolute/path/to/fullchain.pem",
+     "keyFile": "/absolute/path/to/privkey.pem"
+   }
+   ```
+
+   Replace the example hostname and paths with your real TLS identity. `SCREENHOP_PHONE_TLS_CONFIG` can select a different configuration file when set in the controller's environment. Configuration and certificate files are read when sharing starts; stop sharing and enable it again after changing them or renewing a certificate.
+3. Enable **Phone remote**. ScreenHop checks the certificate's validity dates, hostname and matching private key before binding TCP port 53318. The UI requests scoped firewall access only after HTTPS starts successfully. Scan the **HTTPS** QR code and proceed only if the phone validates the certificate without a warning. LAN DNS/DHCP changes do not bypass certificate identity verification.
+
+The listener binds IPv4 interfaces while enabled, but accepts only TLS and the configured Host/HTTPS Origin. The firewall helper's existing rule exposes that TLS listener only; it does not provide transport security itself. Existing firewall rules from older versions may remain, but the replacement service never serves plaintext. Stop older ScreenHop controllers before using this version. Use **Stop sharing** when finished to revoke access and close all phone connections.
 
 ## Requirements and installation
 

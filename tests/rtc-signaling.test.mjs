@@ -1,3 +1,4 @@
+import {tls,fetch} from './helpers/phone-tls.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {PreviewHost,rtcMessage} from '../preview-host.mjs';
@@ -8,7 +9,7 @@ async function fixture(t){
   const signals=[];
   const host=await PreviewHost.create({input:async()=>{},action:async()=>{},signal:async(id,message)=>signals.push({id,message})});
   const url=host.register('abcdef','session',{name:'Test',width:390,height:844,url:'https://example.test'},false);
-  const remote=await PhoneRemote.create({host,port:0,networkInterfaces:()=>({})});
+  const remote=await PhoneRemote.create({tls,host,port:0});
   t.after(async()=>{await remote.close();host.shutdown();});
   const phone=remote.info().url+'view/abcdef';
   const post=(base,data,headers={})=>fetch(base+'/signal',{method:'POST',headers:{'Content-Type':'application/json',...headers},body:JSON.stringify(data)});

@@ -36,7 +36,7 @@ Requires an Omarchy shell with third-party plugins, Quickshell, Hyprland, Node.j
 
 These are Chromium previews, not real devices, Safari or mobile OS emulators. Presets derived from physical specifications are marked approximate. Linking skips unsupported or ambiguous controls, and authentication detection is not a guarantee for every provider. Native browser dialogs and file workflows are available through direct browser mode. Recordings are silent and limited to three minutes or 128 MB.
 
-Phone sharing is opt-in, uses local HTTP on TCP53318, and may request a scoped UFW rule through the system password prompt. Use a trusted network: pairing URLs grant preview control. Installation, removal, retained browser profiles and firewall rules are documented in README.md.
+Phone sharing is opt-in and requires a configured server certificate already trusted by the phone. It uses HTTPS/WSS (TLS 1.2+) on TCP53318, rejects missing or invalid TLS configuration before listening, and may request a scoped UFW rule only after HTTPS starts. Each enable creates a fresh 256-bit pairing credential; stopping sharing revokes it. There is no plaintext transport fallback. Installation, removal, retained browser profiles and firewall rules are documented in README.md.
 
 MIT covers ScreenHop code and original CSS frames. Adapted Playwright device data includes its Apache-2.0 license and notice. The public package excludes standalone Samsung emulator asset files. The author-supplied screenshots show a local Galaxy skin setup, as identified in the README.
 

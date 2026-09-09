@@ -1,3 +1,4 @@
+import {tls,fetch} from './helpers/phone-tls.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {mkdtemp,readFile} from 'node:fs/promises';
@@ -14,7 +15,7 @@ test('screenshot routes require token/origin and explicit boolean skin before ca
   const calls=[],capture={mimeType:'image/png',data:'test',filename:'test.png'};
   const host=await PreviewHost.create({action:async(id,data)=>{calls.push(data);return capture;},input:async()=>{}});
   const desktop=host.register('abcdef','sid',{name:'Test',width:390,height:844},false);
-  const phone=await PhoneRemote.create({host,port:0,networkInterfaces:()=>({})});
+  const phone=await PhoneRemote.create({tls,host,port:0});
   t.after(async()=>{await phone.close();host.shutdown();});
   const remote=phone.info().url+'view/abcdef';
   for(const url of [desktop,remote]){

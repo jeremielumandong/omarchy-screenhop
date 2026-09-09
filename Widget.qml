@@ -401,7 +401,7 @@ BarWidget {
                 Label {
                     width: parent.width - phoneButton.width - parent.spacing
                     anchors.verticalCenter: parent.verticalCenter
-                    text: root.firewallMessage || root.phoneReason || (root.deviceFrame ? "Use your phone on the same Wi-Fi." : "Phone remote requires Device frame.")
+                    text: root.firewallMessage || root.phoneReason || (root.deviceFrame ? "Phone remote requires a trusted HTTPS certificate. See README for setup." : "Phone remote requires Device frame.")
                     font.pixelSize: Style.font.bodySmall
                     opacity: 0.75
                 }
@@ -425,7 +425,7 @@ BarWidget {
                     spacing: Style.space(6)
                     Label {
                         width: parent.width
-                        text: "Open this address on your phone, choose the lead preview, and enable linking to control the other previews."
+                        text: "Open this HTTPS address on your phone. Never bypass a certificate warning. Choose a preview to control."
                         font.pixelSize: Style.font.bodySmall
                     }
                     Button {

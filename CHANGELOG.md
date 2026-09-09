@@ -11,3 +11,5 @@
 Public packaging excludes locally supplied Samsung emulator artwork. See THIRD_PARTY_NOTICES.md for licensing and README.md for limitations.
 
 - Fix connection starvation after five previews by moving persistent event traffic to authenticated WebSockets. Preserve video, validated control endpoints, JPEG fallback, skins and phone revocation.
+
+- Require explicitly configured trusted HTTPS/WSS for phone pairing and remote control (TLS 1.2+). Reject missing, expired, mismatched or unreadable TLS identities before listening. Generate a fresh 256-bit pairing credential on each enable and revoke connections/credentials on stop; remove plaintext LAN pairing and document certificate provisioning.

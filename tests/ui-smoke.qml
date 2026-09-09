@@ -76,7 +76,7 @@ ShellRoot {
                 widget.setPhone(true);
             } else if (stage === 9) {
                 check(widget.phoneEnabled && !widget.phoneReason, "Phone remote enable failed: " + widget.phoneReason);
-                check(widget.phoneUrl === "http://192.168.1.2:8000/remote#test-token", "Phone remote URL missing");
+                check(widget.phoneUrl === "https://screenhop.example.test:53318/test-token/", "Phone remote URL missing");
                 check(widget.phoneQrData === "", "Manual URL fallback must work without a QR image");
                 widget.setPhone(false);
             } else if (stage === 10) {

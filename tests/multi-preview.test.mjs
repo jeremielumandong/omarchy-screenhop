@@ -1,3 +1,4 @@
+import {browserEnvironment,fetch} from './helpers/phone-tls.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {mkdtemp,readFile} from 'node:fs/promises';
@@ -25,7 +26,7 @@ test('seven desktop and seven phone viewers connect, receive video and remain in
  });
  await new Promise(r=>fixture.listen(0,'127.0.0.1',r));
  const url='http://127.0.0.1:'+fixture.address().port;
- const run=async(...args)=>JSON.parse((await exec(process.execPath,[helper,'--state',state,...args],{timeout:40000,env:{...process.env,SCREENHOP_TEST_PHONE_PORT:'0'}})).stdout);
+ const run=async(...args)=>JSON.parse((await exec(process.execPath,[helper,'--state',state,...args],{timeout:40000,env:browserEnvironment()})).stdout);
  let source,viewer;
  const previews=[],phoneTargets=[];
  const evaluate=async(cdp,session,expression)=>(await cdp.send('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true},session)).result.value;

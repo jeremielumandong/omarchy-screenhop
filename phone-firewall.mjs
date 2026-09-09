@@ -32,7 +32,9 @@ export function hasPhoneRule(rules,{iface,subnet}) {
   return rules.split(/\r?\n/).some(line=>line.trim()===expected);
 }
 
-// Called only after the user enables sharing or clicks the explicit retry button.
+// The UI calls this only after the HTTPS-only remote starts successfully, or
+// after an explicit retry while that remote is enabled. A firewall rule never
+// substitutes for TLS; this helper does not start a listener.
 // Credentials are collected by the system polkit agent, never by ScreenHop.
 export async function ensurePhoneFirewall({read=readFile,execute=run}={}) {
   let config;

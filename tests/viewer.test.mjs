@@ -1,3 +1,4 @@
+import {browserEnvironment,fetch} from './helpers/phone-tls.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {mkdtemp,readFile,writeFile} from 'node:fs/promises';
@@ -18,7 +19,7 @@ test('centered live device frame, input forwarding, authentication isolation and
  });
  await new Promise(r=>http.listen(0,'127.0.0.1',r));
  const url='http://127.0.0.1:'+http.address().port;
- const run=async(...args)=>JSON.parse((await exec(process.execPath,[helper,'--state',state,...args],{timeout:40000})).stdout);
+ const run=async(...args)=>JSON.parse((await exec(process.execPath,[helper,'--state',state,...args],{timeout:40000,env:browserEnvironment()})).stdout);
  let source,viewer;
  try{
   const first=await run(...(process.env.SCREENHOP_TEST_HEADFUL?[]:['--headless']),'--device','iphone-13','--url',url);

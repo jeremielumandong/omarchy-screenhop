@@ -19,7 +19,7 @@ if (args[0] === '--phone-status' || args[0] === '--phone') {
     if (args[0] === '--phone') assert.ok(['on', 'off'].includes(args[1]));
     else assert.deepEqual(args, ['--phone-status']);
     const enabled = args[1] === 'on';
-    console.log(JSON.stringify({status: 'phone', enabled, url: enabled ? 'http://192.168.1.2:8000/remote#test-token' : '', urls: [], qrData: ''}));
+    console.log(JSON.stringify({status: 'phone', enabled, url: enabled ? 'https://screenhop.example.test:53318/test-token/' : '', urls: [], qrData: ''}));
 } else if (args[0] === '--status') {
     assert.deepEqual(args, ['--status']);
     console.log(JSON.stringify({status: 'state', enabled: false, previewCount: 0}));
