@@ -107,8 +107,11 @@ ShellRoot {
                 check(widget.availableCommit === "b".repeat(40), "Update check should work in native mode");
                 check(!widget.pickerReloadNeeded, "Checking must not install an update");
                 widget.repositoryUpdate(true);
-            } else {
+            } else if (stage === 14) {
                 check(widget.pickerReloadNeeded && widget.availableCommit === "", "Successful update should offer picker reload");
+                widget.reloadPicker();
+            } else {
+                check(!widget.pickerReloadNeeded && !widget.opened, "Reload must refresh the registry and close the picker without restarting the shell");
                 console.log("PASS ScreenHop catalog, search, frame/native launches, linked toggle, auth pause and panel creation");
                 widget.close();
                 Qt.quit();

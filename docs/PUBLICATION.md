@@ -1,10 +1,10 @@
-# ScreenHop 1.0.2 publication
+# ScreenHop 1.0.3 publication
 
 ## Release scope
 
 The release provides desktop responsive previews, device presets, linked browsing, screenshots, recordings and saved workspaces. Phone remote control is deferred; the package excludes its LAN listener, pairing UI, certificate configuration and firewall helper. Desktop control and browser debugging endpoints remain loopback-only.
 
-Keep `arkane.screenhop` and version `1.0.2`. The public package contains 103 presets and ScreenHop-authored frames. Locally supplied Samsung artwork and its Git history must not be published. Adapted Playwright descriptors retain their upstream Apache-2.0 license/notice and modification attribution.
+Keep `arkane.screenhop` and version `1.0.3`. The public package contains 103 presets and ScreenHop-authored frames. Locally supplied Samsung artwork and its Git history must not be published. Adapted Playwright descriptors retain their upstream Apache-2.0 license/notice and modification attribution.
 
 ## Preparing the package
 
@@ -18,6 +18,6 @@ Use the clean public repository history and push the release commit to `main`. D
 
 The original Marketplace submission, [issue #5799](https://github.com/omacom/omarchy-plugin-marketplace/issues/5799), is closed after publication. For an existing listing, use the [Plugin verification form](https://github.com/omacom/omarchy-plugin-marketplace/issues/new?template=verify-plugin.yml), select **Verify and publish a newer upstream commit**, and supply `arkane.screenhop`, the repository root URL, and the final full 40-character default-branch HEAD. Compatibility validation, security baseline and maintainer approval must bind the same commit. The old snapshot remains authoritative until promotion completes. See [the update workflow](https://github.com/omacom/omarchy-plugin-marketplace/blob/main/VERIFICATION.md#promoting-a-plugin-update).
 
-Publish tag `v1.0.2` and its GitHub release at the same commit. A GitHub release does not update the Marketplace verification snapshot. No local test certificates, private keys, browser profiles, saved credentials or pairing URLs belong in the package.
+Publish tag `v1.0.3` and its GitHub release at the same commit. A GitHub release does not update the Marketplace verification snapshot. No local test certificates, private keys, browser profiles, saved credentials or pairing URLs belong in the package.
 
-Version 1.0.2 includes optional native Chromium sources and build instructions; WebRTC remains the public default. The existing Marketplace issue is closed after publication of the earlier snapshot. A fresh Marketplace validation and security baseline must refer to the final full 1.0.2 commit.
+Version 1.0.3 includes optional native Chromium sources and build instructions; WebRTC remains the public default. The existing Marketplace issue is closed after publication of the earlier snapshot. A fresh Marketplace validation and security baseline must refer to the final full 1.0.3 commit.

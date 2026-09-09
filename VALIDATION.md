@@ -1,4 +1,8 @@
-# ScreenHop 1.0.2 validation
+# ScreenHop 1.0.3 validation
+
+The picker reload regression exercises the Reload picker action using a mocked `omarchy-shell shell rescanPlugins` command and verifies successful completion without a shell restart. The existing catalog, bar text, rendering-mode and updater UI checks also passed. This does not claim a full live-desktop recovery test on the affected machine. Export/plugin validation and version consistency are checked for this patch. Earlier renderer evidence is retained below.
+
+## Previous 1.0.2 validation
 
 This patch adds the saved Bar text toggle and corrects displayed version labels. The native/WebRTC engines and installer behavior are unchanged from 1.0.1. Validation for the underlying renderer is recorded below; it is not a claim of a new full regression run for 1.0.2.
 

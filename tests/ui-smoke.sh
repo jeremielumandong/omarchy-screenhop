@@ -7,12 +7,21 @@ trap 'rm -rf -- "$test_dir"' EXIT
 for module in Commons Ui; do
     ln -s "$shell_dir/$module" "$test_dir/$module"
 done
+mkdir -p "$test_dir/bin"
+cat > "$test_dir/bin/omarchy-shell" <<'SH'
+#!/bin/sh
+[ "$1" = shell ] && [ "$2" = rescanPlugins ] && [ "$#" = 2 ] || exit 99
+printf ok
+SH
+chmod +x "$test_dir/bin/omarchy-shell"
+export PATH="$test_dir/bin:$PATH"
 cp "$plugin_dir/Widget.qml" "$plugin_dir/devices.json" "$test_dir/"
 cp "$plugin_dir/tests/ui-smoke.qml" "$test_dir/shell.qml"
 cat > "$test_dir/plugin-update.mjs" <<'JS'
 import assert from 'node:assert/strict';
 const args=process.argv.slice(2);
-if(args[0]==='--progress') console.log(JSON.stringify({status:'idle'}));
+if(args[0]==='--acknowledge') console.log(JSON.stringify({status:'idle'}));
+else if(args[0]==='--progress') console.log(JSON.stringify({status:'idle'}));
 else if(args[0]==='--check') console.log(JSON.stringify({status:'checked',installed:'a'.repeat(40),commit:'b'.repeat(40),available:true,message:'Update available'}));
 else { assert.deepEqual(args,['--install','a'.repeat(40),'b'.repeat(40)]);console.log(JSON.stringify({status:'installed',message:'Updated'})); }
 JS

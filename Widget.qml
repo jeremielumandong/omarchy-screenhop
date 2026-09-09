@@ -8,7 +8,7 @@ import qs.Ui
 BarWidget {
     id: root
     moduleName: "arkane.screenhop"
-    Component.onCompleted: console.info("ScreenHop 1.0.2 widget loaded:", pluginDirectory, "initial URL:", website)
+    Component.onCompleted: console.info("ScreenHop 1.0.3 widget loaded:", pluginDirectory, "initial URL:", website)
     readonly property bool showBarText: setting("showBarText", true)
     function setBarText(value) {
         var entry = {id: root.moduleName};
@@ -40,10 +40,11 @@ BarWidget {
             } catch (error) { /* Keep the last progress message. */ }
         } }
     }
+    function reloadPicker() { if (!busy) updateAcknowledger.running = true; }
     Process {
         id: updateAcknowledger
         command: ["node", root.pluginDirectory + "plugin-update.mjs", "--acknowledge"]
-        onExited: (exitCode, exitStatus) => { if (exitCode === 0) pickerReloader.running = true; else root.updateMessage = "Could not clear update status. Reload the shell manually."; }
+        onExited: (exitCode, exitStatus) => { if (exitCode === 0) pickerReloader.running = true; else root.updateMessage = "Could not clear update status. Close and reopen ScreenHop, then retry."; }
     }
     function repositoryUpdate(install) {
         if (busy) return;
@@ -72,7 +73,14 @@ BarWidget {
             if (exitCode !== 0 && (root.updateMessage === "Checking for updates…" || root.updateMessage === "Installing update…")) root.updateMessage = "Update failed. Check your connection and installation, then retry.";
         }
     }
-    Process { id: pickerReloader; command: ["omarchy", "restart", "shell"] }
+    Process {
+        id: pickerReloader
+        command: ["omarchy-shell", "shell", "rescanPlugins"]
+        onExited: (exitCode, exitStatus) => {
+            if (exitCode === 0) { root.pickerReloadNeeded = false; root.close(); }
+            else root.updateMessage = "Could not refresh the plugin registry. Close and reopen ScreenHop, then retry.";
+        }
+    }
     property bool toolsExpanded: false
     property var workspaceNames: []
     property string workspaceName: ""
@@ -337,7 +345,7 @@ BarWidget {
                 Button { text: "Check for updates"; bordered: true; focusable: true; enabled: !root.busy; onClicked: root.repositoryUpdate(false) }
                 Button { text: "Install update…"; visible: root.availableCommit !== ""; bordered: true; focusable: true; enabled: !root.busy; onClicked: root.confirmDownload = true }
                 Button { text: "Build native previews"; visible: root.checkedInstalledCommit !== "" && root.availableCommit === ""; bordered: true; focusable: true; enabled: !root.busy; onClicked: root.confirmDownload = true }
-                Button { text: "Reload picker"; visible: root.pickerReloadNeeded; bordered: true; focusable: true; enabled: !root.busy; onClicked: updateAcknowledger.running = true }
+                Button { text: "Reload picker"; visible: root.pickerReloadNeeded; bordered: true; focusable: true; enabled: !root.busy; onClicked: root.reloadPicker() }
             }
             Label { width: parent.width; visible: root.updateMessage !== ""; text: root.updateMessage; font.pixelSize: Style.font.bodySmall }
             Column {
@@ -496,7 +504,7 @@ BarWidget {
                             Button { text: root.batchSkin ? "✓ Include skin" : "Page only"; selected: root.batchSkin; bordered: true; focusable: true; enabled: !root.busy; onClicked: root.batchSkin = !root.batchSkin }
                             Button { text: "Screenshot all"; bordered: true; focusable: true; enabled: !root.busy && root.deviceFrame; onClicked: root.workspaceAction(root.batchSkin ? ["--batch"] : ["--batch", "--page-only"]) }
                         }
-                        Label { width: parent.width; text: "ScreenHop 1.0.2 · " + (root.buildStatus || "Check the running build before applying an update."); font.pixelSize: Style.font.bodySmall }
+                        Label { width: parent.width; text: "ScreenHop 1.0.3 · " + (root.buildStatus || "Check the running build before applying an update."); font.pixelSize: Style.font.bodySmall }
                         Row {
                             spacing: Style.space(6)
                             Button { text: "Check build"; bordered: true; focusable: true; enabled: !root.busy; onClicked: root.workspaceAction(["--status"]) }
