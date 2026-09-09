@@ -18,6 +18,61 @@ BarWidget {
         if (root.bar && root.bar.shell && typeof root.bar.shell.updateEntryInline === "function")
             root.bar.shell.updateEntryInline(root.moduleName, entry);
     }
+    property string availableCommit: ""
+    property string checkedInstalledCommit: ""
+    property string updateMessage: ""
+    property bool confirmDownload: false
+    property bool pickerReloadNeeded: false
+    property bool updateInProgress: false
+    Timer { interval: 1000; repeat: true; running: root.updateInProgress; onTriggered: { if (!updateProgress.running) updateProgress.running = true; } }
+    Process {
+        id: updateProgress
+        command: ["node", root.pluginDirectory + "plugin-update.mjs", "--progress"]
+        running: true
+        stdout: SplitParser { onRead: data => {
+            try {
+                var result = JSON.parse(data);
+                if (result.status === "idle") return;
+                root.updateInProgress = result.status === "installing";
+                root.updateMessage = result.message || "";
+                if (result.status === "installed") { root.pickerReloadNeeded = true; root.availableCommit = ""; }
+                if (result.status === "error") root.availableCommit = "";
+            } catch (error) { /* Keep the last progress message. */ }
+        } }
+    }
+    Process {
+        id: updateAcknowledger
+        command: ["node", root.pluginDirectory + "plugin-update.mjs", "--acknowledge"]
+        onExited: (exitCode, exitStatus) => { if (exitCode === 0) pickerReloader.running = true; else root.updateMessage = "Could not clear update status. Reload the shell manually."; }
+    }
+    function repositoryUpdate(install) {
+        if (busy) return;
+        updateMessage = install ? "Installing update…" : "Checking for updates…";
+        repositoryUpdater.command = ["node", pluginDirectory + "plugin-update.mjs"].concat(install ? ["--install", checkedInstalledCommit, availableCommit || checkedInstalledCommit] : ["--check"]);
+        if (!install) { checkedInstalledCommit = ""; availableCommit = ""; confirmDownload = false; }
+        repositoryUpdater.running = true;
+    }
+    Process {
+        id: repositoryUpdater
+        stdout: SplitParser { onRead: data => {
+            try {
+                var result = JSON.parse(data);
+                root.updateMessage = result.message || "";
+                if (result.status === "installing") root.updateInProgress = true;
+                if (result.status === "checked") {
+                    root.checkedInstalledCommit = result.installed;
+                    root.availableCommit = result.available ? result.commit : "";
+                }
+                if (result.status === "installed") { root.pickerReloadNeeded = true; root.availableCommit = ""; }
+                if (result.status === "error") root.availableCommit = "";
+            } catch (error) { /* Ignore non-JSON diagnostics. */ }
+        } }
+        onExited: (exitCode, exitStatus) => {
+            root.confirmDownload = false;
+            if (exitCode !== 0 && (root.updateMessage === "Checking for updates…" || root.updateMessage === "Installing update…")) root.updateMessage = "Update failed. Check your connection and installation, then retry.";
+        }
+    }
+    Process { id: pickerReloader; command: ["omarchy", "restart", "shell"] }
     property bool toolsExpanded: false
     property var workspaceNames: []
     property string workspaceName: ""
@@ -48,7 +103,7 @@ BarWidget {
     property string selectedId: ""
     property string status: "Choose a device to open a browser preview."
     property string launchError: ""
-    readonly property bool busy: launcher.running || linkUpdater.running || workspaceRunner.running
+    readonly property bool busy: launcher.running || linkUpdater.running || workspaceRunner.running || repositoryUpdater.running || pickerReloader.running || updateInProgress || updateAcknowledger.running
     readonly property string pluginDirectory: decodeURIComponent(Qt.resolvedUrl(".").toString().replace(/^file:\/\//, "")).replace(/\/?$/, "/")
     readonly property var groups: {
         var result = [];
@@ -277,6 +332,23 @@ BarWidget {
                 Button { id: dismiss; text: "Close"; focusable: true; onClicked: root.close() }
             }
             Label { width: parent.width; text: "YOUR WEBSITE, ON EVERY SCREEN"; font.pixelSize: Style.font.bodySmall; opacity: 0.65 }
+            Flow {
+                width: parent.width; spacing: Style.space(6)
+                Button { text: "Check for updates"; bordered: true; focusable: true; enabled: !root.busy; onClicked: root.repositoryUpdate(false) }
+                Button { text: "Install update…"; visible: root.availableCommit !== ""; bordered: true; focusable: true; enabled: !root.busy; onClicked: root.confirmDownload = true }
+                Button { text: "Build native previews"; visible: root.checkedInstalledCommit !== "" && root.availableCommit === ""; bordered: true; focusable: true; enabled: !root.busy; onClicked: root.confirmDownload = true }
+                Button { text: "Reload picker"; visible: root.pickerReloadNeeded; bordered: true; focusable: true; enabled: !root.busy; onClicked: updateAcknowledger.running = true }
+            }
+            Label { width: parent.width; visible: root.updateMessage !== ""; text: root.updateMessage; font.pixelSize: Style.font.bodySmall }
+            Column {
+                visible: root.confirmDownload; width: parent.width; spacing: Style.space(6)
+                Label { width: parent.width; text: root.availableCommit !== "" ? "Install the checked update and build native previews? Existing previews stay open. Reopen them after saving your work. Build dependencies must already be installed." : "Build native previews from the current source? Build dependencies must already be installed. Existing previews stay open."; font.pixelSize: Style.font.bodySmall }
+                Row {
+                    spacing: Style.space(6)
+                    Button { text: root.availableCommit !== "" ? "Install update" : "Build native previews"; bordered: true; focusable: true; enabled: !root.busy; onClicked: root.repositoryUpdate(true) }
+                    Button { text: "Cancel"; bordered: true; focusable: true; enabled: !root.busy; onClicked: root.confirmDownload = false }
+                }
+            }
             TextField {
                 width: parent.width
                 text: root.website
@@ -428,14 +500,14 @@ BarWidget {
                         Row {
                             spacing: Style.space(6)
                             Button { text: "Check build"; bordered: true; focusable: true; enabled: !root.busy; onClicked: root.workspaceAction(["--status"]) }
-                            Button { text: "Apply update…"; visible: root.updateAvailable; bordered: true; focusable: true; enabled: !root.busy; onClicked: root.confirmUpdate = true }
+                            Button { text: "Restart previews…"; visible: root.updateAvailable; bordered: true; focusable: true; enabled: !root.busy; onClicked: root.confirmUpdate = true }
                         }
                         Column {
                             visible: root.confirmUpdate; width: parent.width; spacing: Style.space(6)
                             Label { width: parent.width; text: "This closes and reopens all framed previews. Unsaved page changes will be lost. Device choices and URLs are restored; linking starts off. Finish signing in first."; font.pixelSize: Style.font.bodySmall }
                             Row {
                                 spacing: Style.space(6)
-                                Button { text: "Close previews and update"; bordered: true; focusable: true; enabled: !root.busy; onClicked: root.workspaceAction(["--apply-update", "--confirm-close"]) }
+                                Button { text: "Restart previews"; bordered: true; focusable: true; enabled: !root.busy; onClicked: root.workspaceAction(["--apply-update", "--confirm-close"]) }
                                 Button { text: "Cancel"; bordered: true; focusable: true; enabled: !root.busy; onClicked: root.confirmUpdate = false }
                             }
                         }

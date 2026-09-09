@@ -100,8 +100,15 @@ ShellRoot {
                 check(widget.launchError.indexOf("WebRTC") >= 0, "Native workspace must be explicitly unsupported");
                 widget.customMobile = true;
                 widget.launchCustom();
-            } else {
+            } else if (stage === 12) {
                 check(!widget.launchError, "Experimental launch failed: " + widget.launchError);
+                widget.repositoryUpdate(false);
+            } else if (stage === 13) {
+                check(widget.availableCommit === "b".repeat(40), "Update check should work in native mode");
+                check(!widget.pickerReloadNeeded, "Checking must not install an update");
+                widget.repositoryUpdate(true);
+            } else {
+                check(widget.pickerReloadNeeded && widget.availableCommit === "", "Successful update should offer picker reload");
                 console.log("PASS ScreenHop catalog, search, frame/native launches, linked toggle, auth pause and panel creation");
                 widget.close();
                 Qt.quit();

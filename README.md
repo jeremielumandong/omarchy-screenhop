@@ -189,3 +189,7 @@ Native profiles are retained under `$XDG_STATE_HOME/screenhop/native` (normally 
 ### Icon-only bar button
 
 Open ScreenHop and switch off **Bar text** beside **Close** to show only its icon in the desktop bar. The tooltip still identifies ScreenHop. The choice is saved in the plugin’s inline `showBarText` setting and survives shell restarts. Switch **Bar text** on to restore the label.
+
+### Update from the picker
+
+Click **Check for updates** in the main ScreenHop picker (available in both rendering modes), then **Install update…** and confirm. The updater installs the exact checked commit, refuses local edits or diverged branches, and builds the native host, including on its first installation. If the source is already current, **Build native previews** builds or retries it without requiring another release. The documented compiler and Qt dependencies must be installed separately; the updater does not install system packages. A build failure leaves the downloaded source in place and reports how to retry; WebRTC remains available. Copied installations must be reinstalled through Omarchy to use Git updates. Click **Reload picker** after success; this restarts the Omarchy shell. Existing previews remain open until you choose to close and reopen them. **Check build → Restart previews…** separately restarts WebRTC previews against the installed code; it does not download updates.

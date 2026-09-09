@@ -39,7 +39,7 @@ if [[ -e "$plugin_dir" ]]; then
     cp -a -- "$plugin_dir" "$backup_dir/plugin"
 fi
 mkdir -p -- "$plugin_dir"
-for filename in independent-browser.mjs native-launch.mjs native-chromium.mjs native-switch.mjs LOCAL_BROWSER_TEST.md Widget.qml manifest.json viewport.mjs native-preview.mjs preview-host.mjs skin-assets.mjs event-sockets.mjs viewer.html linked-previews.mjs sync-policy.mjs sync.js capture-rtc.js capture-ui.js build.mjs workspaces.mjs devices.json README.md PLAN.md LICENSE THIRD_PARTY_NOTICES.md preview.png; do
+for filename in plugin-update.mjs independent-browser.mjs native-launch.mjs native-chromium.mjs native-switch.mjs LOCAL_BROWSER_TEST.md Widget.qml manifest.json viewport.mjs native-preview.mjs preview-host.mjs skin-assets.mjs event-sockets.mjs viewer.html linked-previews.mjs sync-policy.mjs sync.js capture-rtc.js capture-ui.js build.mjs workspaces.mjs devices.json README.md PLAN.md LICENSE THIRD_PARTY_NOTICES.md preview.png; do
     cp -- "$source_dir/$filename" "$plugin_dir/$filename"
 done
 mkdir -p -- "$plugin_dir/native" "$plugin_dir/.native"
