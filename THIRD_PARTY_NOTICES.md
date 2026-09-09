@@ -23,3 +23,7 @@ The supplied archive README files describe emulator use but contain no identifie
 - Reviewed: 2026-09-08.
 
 Device and vendor names identify testing presets. ScreenHop is not endorsed by Apple, Samsung, Google, Microsoft, or the other named device manufacturers.
+
+## ws WebSocket implementation
+
+ScreenHop bundles unmodified ws 8.21.3 from https://github.com/websockets/ws under the MIT license in `third_party/ws/LICENSE`. It provides the authenticated event WebSocket server. Optional native extensions are not installed. No npm installation is required by users.

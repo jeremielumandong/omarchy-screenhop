@@ -453,7 +453,26 @@ async function refreshDiagnostics() {
 $('diagnostics').addEventListener('toggle',refreshDiagnostics);
 new MutationObserver(refreshDiagnostics).observe(document.querySelector('.tool-dock'),{attributes:true,attributeFilter:['class']});
 addEventListener('pagehide', () => { viewerLeaving = true; clearTimeout(activityTimer); clearTimeout(diagnosticTimer); });
-const events = new EventSource(config.base + '/events?clientId=' + encodeURIComponent(clientId));
+// WebSockets do not occupy the HTTP connection pool needed by control POSTs.
+class PreviewEvents extends EventTarget {
+ constructor(){super();this.stopped=false;this.delay=500;this.connect();}
+ connect(){
+  if(this.stopped)return;
+  const url=new URL(config.base+'/events-ws?clientId='+encodeURIComponent(clientId),location.href);url.protocol=location.protocol==='https:'?'wss:':'ws:';
+  const socket=this.socket=new WebSocket(url);
+  socket.addEventListener('open',()=>{this.delay=500;this.dispatchEvent(new Event('open'));});
+  socket.addEventListener('message',event=>{
+   if(typeof event.data!=='string')return;
+   for(const block of event.data.split('\n\n')){
+    const type=block.match(/^event: (.+)$/m)?.[1],data=block.match(/^data: (.*)$/m)?.[1];
+    if(type&&data!==undefined)this.dispatchEvent(new MessageEvent(type,{data}));
+   }
+  });
+  socket.addEventListener('close',()=>{if(this.stopped)return;this.dispatchEvent(new Event('error'));this.timer=setTimeout(()=>this.connect(),this.delay);this.delay=Math.min(8000,this.delay*2);});
+ }
+ close(){this.stopped=true;clearTimeout(this.timer);this.socket?.close();}
+}
+const events = new PreviewEvents();
 events.addEventListener('open', () => { if (config.transport === 'webrtc') { status('connecting','Connecting video'); void startRTC(); } else status('live','Live · Compatibility'); });
 events.addEventListener('signal', event => { try { acceptRTCSignal(JSON.parse(event.data)); } catch {} });
 events.addEventListener('frame', event => { if(config.transport === 'webrtc' && rtcMode !== 'jpeg')return; try { const frame = JSON.parse(event.data); if (typeof frame.data !== 'string') return; display.src = 'data:image/jpeg;base64,' + frame.data; screen.classList.add('has-frame'); status('live','Live'); } catch { toast('Unable to display a preview frame.'); } });

@@ -73,7 +73,7 @@ Tap to click and swipe to scroll. For typing, tap the field inside the preview, 
 - Node.js 22.4 or later with built-in WebSocket support.
 - Chromium, or a Chromium-based executable selected with SCREENHOP_BROWSER.
 
-No npm dependencies or browser extension are needed.
+No npm installation or browser extension is needed. The MIT-licensed ws library is bundled for event delivery.
 
 Install from the public repository:
 
@@ -171,3 +171,9 @@ The 103 presets include current iPhone, Galaxy, Pixel and other Android families
 The public package uses ScreenHop's original decorative frames. Samsung-provided emulator PNG artwork is excluded; local development installations may contain separately supplied artwork. Manufacturer names identify test presets and do not imply endorsement.
 
 ScreenHop code and its original preview artwork are MIT licensed. Adapted Playwright device descriptors retain Apache-2.0 licensing and notices; see [third-party notices](THIRD_PARTY_NOTICES.md). The preview screenshots were supplied by the author and show ScreenHop displaying omarchy.org, including the author’s local Galaxy skin setup.
+
+### Multiple preview connections
+
+Preview events and video signaling responses use authenticated WebSockets, avoiding the HTTP connection-pool exhaustion that previously stalled the sixth preview. WebRTC still carries video; validated HTTP endpoints still carry input and control requests. Seven desktop previews plus seven phone viewers are covered by an isolated small-viewport regression; actual device count and performance depend on website complexity and hardware.
+
+For a Git-managed install, use `omarchy plugin update arkane.screenhop` to fetch updates, then **Workspace and tools → Check build → Apply update** to reopen existing previews with the new controller. Finish unsaved work before applying. Copied local installs must rerun their installer.

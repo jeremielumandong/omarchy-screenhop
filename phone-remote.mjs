@@ -1,3 +1,4 @@
+import {attachEventSockets} from './event-sockets.mjs';
 import {serveSkinAsset} from './skin-assets.mjs';
 import {readFile} from 'node:fs/promises';
 import {createServer} from 'node:http';
@@ -39,6 +40,16 @@ export class PhoneRemote {
       throw error;
     }
     remote.port=remote.server.address().port;
+    remote.closeEventSockets=attachEventSockets(remote.server,req=>{
+      const validHosts=new Set([...remote.addresses].map(address=>`${address}:${remote.port}`));
+      if(!remote.enabled||!validHosts.has(req.headers.host)||req.headers.origin!=='http://'+req.headers.host||req.headers['sec-fetch-site']==='cross-site')throw Error('Invalid event origin');
+      const url=new URL(req.url,'http://'+req.headers.host),prefix='/'+remote.token+'/';
+      if(!url.pathname.startsWith(prefix))throw Error('Invalid pairing');
+      const match=url.pathname.slice(prefix.length).match(/^view\/([A-Za-z0-9_-]+)\/events-ws$/);
+      const record=match&&remote.host.records.get(match[1]),clientId=url.searchParams.get('clientId')||'';
+      if(!record||!/^[A-Za-z0-9_-]{8,80}$/.test(clientId))throw Error('Unknown viewer');
+      return stream=>remote.subscribe(record,stream,clientId);
+    });
     remote.reason=addresses.length?`Use the same Wi-Fi network. If a firewall is enabled, allow TCP port ${remote.port} from your local network.`:'No LAN IPv4 address is available. Connect this computer to Wi-Fi or Ethernet, then turn Phone remote off and on.';
     remote.urls=(addresses.length?addresses:['127.0.0.1']).map(address=>`http://${address}:${remote.port}/${remote.token}/`);
     remote.qrData='';
@@ -50,7 +61,7 @@ export class PhoneRemote {
   }
   info() {return this.enabled?{enabled:true,connectedViewers:this.streams.size,connectedPeers:this.peers.size,urls:[...this.urls],url:this.urls[0],qrData:this.qrData,port:this.port,reason:this.reason}:{enabled:false,urls:[],url:'',qrData:''};}
   async close() {
-    this.enabled=false;this.token='';this.urls=[];this.qrData='';
+    this.enabled=false;this.token='';this.urls=[];this.qrData='';this.closeEventSockets?.();
     for(const [stream,cleanup] of this.streams){cleanup();stream.destroy();}
     const closed=new Promise(resolve=>this.server.close(resolve));
     for(const socket of this.sockets)socket.destroy();
@@ -59,9 +70,14 @@ export class PhoneRemote {
     await Promise.allSettled([...this.peers.values()].map(({id,peerId})=>Promise.resolve().then(()=>this.host.signal?.(id,{peerId,type:'close'}))));
     this.peers.clear();
   }
+  subscribe(record,res,clientId) {
+    const unsubscribe=this.host.subscribe(record,res,clientId);
+    const cleanup=()=>{unsubscribe();this.streams.delete(res);if(!res.replaced)for(const peerId of res.peers)this.peers.delete(record.id+':'+peerId);};
+    this.streams.set(res,cleanup);res.once('close',cleanup);return cleanup;
+  }
   async handle(req,res) {
     res.setHeader('Cache-Control','no-store');res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Referrer-Policy','no-referrer');
-    res.setHeader('Content-Security-Policy',"default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; media-src 'self' blob:; connect-src 'self'; frame-ancestors 'none'; form-action 'none'; base-uri 'none'");
+    res.setHeader('Content-Security-Policy',`default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; media-src 'self' blob:; connect-src 'self' ws://${req.headers.host}; frame-ancestors 'none'; form-action 'none'; base-uri 'none'`);
     const validHosts=new Set([...this.addresses].map(address=>`${address}:${this.port}`));
     if(!this.enabled||!validHosts.has(req.headers.host)){res.writeHead(403);res.end();return;}
     const origin='http://'+req.headers.host;
@@ -92,9 +108,7 @@ export class PhoneRemote {
     }
     if(req.method==='GET'&&route==='events'){
       res.writeHead(200,{'Content-Type':'text/event-stream','Connection':'keep-alive'});
-      const unsubscribe=this.host.subscribe(record,res,new URL(req.url,origin).searchParams.get('clientId')||'');
-      const cleanup=()=>{unsubscribe();this.streams.delete(res);if(!res.replaced)for(const peerId of res.peers)this.peers.delete(record.id+':'+peerId);};
-      this.streams.set(res,cleanup);res.once('close',cleanup);return;
+      this.subscribe(record,res,new URL(req.url,origin).searchParams.get('clientId')||'');return;
     }
     if(req.method!=='POST'||!['input','action','signal'].includes(route)){res.writeHead(405);res.end();return;}
     if(!req.headers['content-type']?.toLowerCase().startsWith('application/json'))throw new Error('JSON required');

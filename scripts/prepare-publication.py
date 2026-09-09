@@ -6,7 +6,7 @@ if len(sys.argv)!=2: raise SystemExit('Usage: python3 scripts/prepare-publicatio
 target=pathlib.Path(sys.argv[1]).resolve()
 if target.exists(): raise SystemExit('Output must be a new directory')
 target.mkdir(parents=True)
-root_files=['Widget.qml','manifest.json','viewport.mjs','native-preview.mjs','preview-host.mjs','phone-remote.mjs','phone-firewall.mjs','viewer.html','linked-previews.mjs','sync-policy.mjs','sync.js','capture-rtc.js','capture-ui.js','build.mjs','workspaces.mjs','skin-assets.mjs','README.md','PLAN.md','LICENSE','THIRD_PARTY_NOTICES.md','preview.png','CHANGELOG.md','.gitignore']
+root_files=['Widget.qml','manifest.json','viewport.mjs','native-preview.mjs','preview-host.mjs','phone-remote.mjs','phone-firewall.mjs','viewer.html','linked-previews.mjs','sync-policy.mjs','sync.js','capture-rtc.js','capture-ui.js','build.mjs','workspaces.mjs','skin-assets.mjs','event-sockets.mjs','README.md','PLAN.md','LICENSE','THIRD_PARTY_NOTICES.md','preview.png','CHANGELOG.md','.gitignore']
 for name in root_files:shutil.copy2(source/name,target/name)
 for folder in ['scripts','tests','third_party']:
  for p in (source/folder).rglob('*'):

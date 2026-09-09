@@ -1,3 +1,4 @@
+import {attachEventSockets} from './event-sockets.mjs';
 import {serveSkinAsset} from './skin-assets.mjs';
 import {createServer} from 'node:http';
 import {randomBytes} from 'node:crypto';
@@ -18,6 +19,13 @@ export class PreviewHost {
     }));
     await new Promise((resolve,reject)=>{host.server.once('error',reject);host.server.listen(0,'127.0.0.1',resolve)});
     host.origin='http://127.0.0.1:'+host.server.address().port;
+    host.closeEventSockets=attachEventSockets(host.server,req=>{
+      if(req.headers.host!==new URL(host.origin).host||req.headers.origin!==host.origin)throw Error('Invalid event origin');
+      const url=new URL(req.url,host.origin),match=url.pathname.match(new RegExp('^/'+host.token+'/view/([A-Fa-f0-9]+)/events-ws$'));
+      const record=match&&host.records.get(match[1]),clientId=url.searchParams.get('clientId')||'';
+      if(!record||!/^[A-Za-z0-9_-]{8,80}$/.test(clientId))throw Error('Unknown viewer');
+      return stream=>host.subscribe(record,stream,clientId);
+    });
     return host;
   }
   register(id,sessionId,device,linked) {
@@ -88,7 +96,7 @@ export class PreviewHost {
   async handle(req,res) {
     res.setHeader('Cache-Control','no-store'); res.setHeader('X-Content-Type-Options','nosniff');
     res.setHeader('Referrer-Policy','no-referrer');
-    res.setHeader('Content-Security-Policy',"default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; media-src 'self' blob:; connect-src 'self'; frame-ancestors 'none'");
+    res.setHeader('Content-Security-Policy',`default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; media-src 'self' blob:; connect-src 'self' ${this.origin.replace('http:','ws:')}; frame-ancestors 'none'`);
     const path=new URL(req.url,this.origin).pathname;
     const match=path.match(new RegExp('^/'+this.token+'/view/([A-Fa-f0-9]+)(/(events|input|action|signal|capture-ui\\.js|skin/[A-Za-z0-9_-]+/[A-Za-z0-9_.-]+))?$'));
     const record=match&&this.records.get(match[1]);
@@ -126,7 +134,7 @@ export class PreviewHost {
   }
   shutdown() {
     for(const id of this.records.keys())this.remove(id);
-    this.server.close(); this.server.closeAllConnections();
+    this.closeEventSockets?.(); this.server.close(); this.server.closeAllConnections();
   }
 }
 
