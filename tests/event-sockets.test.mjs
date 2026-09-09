@@ -35,3 +35,13 @@ test('phone event sockets use pairing/Host/origin checks and revoke without clos
  const closed=once(b,'close');await phone.close();await closed;
  const state=once(a,'message');host.update('abcdef',{linked:true});assert.match((await state)[0].toString(),/"linked":true/);
 });
+
+test('ordinary browser disconnect releases its subscription and RTC peers',async t=>{
+ const signals=[];
+ const host=await PreviewHost.create({input:async()=>{},action:async()=>{},signal:async(id,m)=>signals.push(m)});
+ const base=host.register('abcdef','sid',{name:'test',width:200,height:300},false);t.after(()=>host.shutdown());
+ const ws=await connect(base);const record=host.records.get('abcdef');
+ await host.receiveSignal(record,{type:'offer',peerId:'peer1234',clientId:'viewer123',sdp:'v=0'});
+ const stream=[...record.streams][0],closed=once(stream,'close');ws.close();await closed;
+ assert.equal(record.streams.size,0);assert.ok(signals.some(m=>m.type==='close'&&m.peerId==='peer1234'));
+});

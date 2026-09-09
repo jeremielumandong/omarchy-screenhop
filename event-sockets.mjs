@@ -11,6 +11,7 @@ export function attachEventSockets(server,authorize) {
   sockets.handleUpgrade(req,socket,head,ws=>{
    const stream=createWebSocketStream(ws,{decodeStrings:false});
    stream.on('error',()=>stream.destroy());
+   ws.once('close',()=>stream.destroy());
    // The event socket is server-to-viewer only; never accept commands here.
    ws.on('message',()=>ws.close(1008,'Use the validated control endpoints'));
    try {subscribe(stream);}catch {stream.destroy();}
