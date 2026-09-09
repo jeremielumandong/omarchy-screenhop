@@ -8,7 +8,7 @@ import qs.Ui
 BarWidget {
     id: root
     moduleName: "arkane.screenhop"
-    Component.onCompleted: console.info("ScreenHop 1.0.1 widget loaded:", pluginDirectory, "initial URL:", website)
+    Component.onCompleted: console.info("ScreenHop 1.0.2 widget loaded:", pluginDirectory, "initial URL:", website)
     readonly property bool showBarText: setting("showBarText", true)
     function setBarText(value) {
         var entry = {id: root.moduleName};
@@ -424,7 +424,7 @@ BarWidget {
                             Button { text: root.batchSkin ? "✓ Include skin" : "Page only"; selected: root.batchSkin; bordered: true; focusable: true; enabled: !root.busy; onClicked: root.batchSkin = !root.batchSkin }
                             Button { text: "Screenshot all"; bordered: true; focusable: true; enabled: !root.busy && root.deviceFrame; onClicked: root.workspaceAction(root.batchSkin ? ["--batch"] : ["--batch", "--page-only"]) }
                         }
-                        Label { width: parent.width; text: "ScreenHop 1.0.1 · " + (root.buildStatus || "Check the running build before applying an update."); font.pixelSize: Style.font.bodySmall }
+                        Label { width: parent.width; text: "ScreenHop 1.0.2 · " + (root.buildStatus || "Check the running build before applying an update."); font.pixelSize: Style.font.bodySmall }
                         Row {
                             spacing: Style.space(6)
                             Button { text: "Check build"; bordered: true; focusable: true; enabled: !root.busy; onClicked: root.workspaceAction(["--status"]) }

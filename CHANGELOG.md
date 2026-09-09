@@ -1,3 +1,15 @@
+# ScreenHop 1.0.2
+
+- Add **Bar text** beside **Close** in the ScreenHop picker. Switch it off for an icon-only desktop bar button; the ScreenHop tooltip remains available.
+- Save the preference across shell restarts while preserving other plugin settings.
+- Correct the old 1.0.0 preview footer and show 1.0.2 consistently in the picker and preview.
+
+Native previews remain optional, with WebRTC as the default. The native build requirements documented in README.md still apply.
+
+Update with `omarchy plugin update arkane.screenhop`, then run `omarchy restart shell` and open ScreenHop from the desktop bar. Close and reopen existing preview windows to load the updated footer.
+
+---
+
 # ScreenHop 1.0.1
 
 - Add optional **Native previews (experimental)**: system Chromium embedded inside the original device skins, with persistent per-device profiles. WebRTC remains the default and handles linked previews.

@@ -6,7 +6,7 @@ Built for developers testing responsive websites. See how your site adapts acros
 
 Link supported interactions across previews and save screenshots or short recordings to share what you find. No browser extension, npm setup, or cloud account required.
 
-**Version 1.0.1 · 103 presets · Custom viewports · MIT-licensed code**
+**Version 1.0.2 · 103 presets · Custom viewports · MIT-licensed code**
 
 - **Spot layout problems sooner.** Compare multiple device sizes in centered, borderless preview windows.
 - **Repeat less, compare more.** Optionally link matching clicks, text input, scrolling and supported navigation across previews.
@@ -58,7 +58,7 @@ Clicks match visible unique semantic labels and text, with generated IDs as a la
 
 ## First-release scope
 
-ScreenHop 1.0.1 runs its device previews on your desktop. Phone remote control, QR pairing, LAN sharing, certificate setup and firewall automation are not included. Phone and tablet presets still provide responsive layouts and touch-input emulation inside desktop preview windows.
+ScreenHop 1.0.2 runs its device previews on your desktop. Phone remote control, QR pairing, LAN sharing, certificate setup and firewall automation are not included. Phone and tablet presets still provide responsive layouts and touch-input emulation inside desktop preview windows.
 
 The preview HTTP/WebSocket control listener and browser debugging endpoints are loopback-only. Screenshots, recordings, linked interactions and saved workspaces remain available locally. Websites loaded in previews still use their normal network connections.
 

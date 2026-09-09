@@ -1,4 +1,15 @@
-# ScreenHop 1.0.1 validation
+# ScreenHop 1.0.2 validation
+
+This patch adds the saved Bar text toggle and corrects displayed version labels. The native/WebRTC engines and installer behavior are unchanged from 1.0.1. Validation for the underlying renderer is recorded below; it is not a claim of a new full regression run for 1.0.2.
+
+## 1.0.2 checks
+
+- Exported-package picker smoke passed, including hiding/restoring bar text and preserving existing settings.
+- Exported package passed Omarchy plugin validation.
+- Manifest, picker and preview version labels all match 1.0.2; the exported picker includes Bar text and retains the optional native setting.
+- `git diff --check` passed.
+
+## Previous 1.0.1 validation
 
 ## Final exported release checks
 
