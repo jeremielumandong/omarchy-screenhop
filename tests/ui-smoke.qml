@@ -27,6 +27,12 @@ ShellRoot {
         onTriggered: {
             if (!widget.devices.length || widget.busy) return;
             if (stage === 0) {
+                check(widget.showBarText, "Bar text should initially be visible");
+                widget.settings = {nativePreviews: false, preservedSetting: "keep"};
+                widget.setBarText(false);
+                check(!widget.showBarText && widget.settings.preservedSetting === "keep", "Icon-only preference must preserve settings");
+                widget.setBarText(true);
+                check(widget.showBarText, "Bar text can be restored");
                 check(widget.devices.length >= 16, "Catalog load failed: " + widget.launchError);
                 check(!widget.linked, "Previews should start unlinked");
                 check(widget.deviceFrame, "Device frame should be the default");

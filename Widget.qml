@@ -9,6 +9,15 @@ BarWidget {
     id: root
     moduleName: "arkane.screenhop"
     Component.onCompleted: console.info("ScreenHop 1.0.1 widget loaded:", pluginDirectory, "initial URL:", website)
+    readonly property bool showBarText: setting("showBarText", true)
+    function setBarText(value) {
+        var entry = {id: root.moduleName};
+        for (var key in root.settings) if (key !== "id") entry[key] = root.settings[key];
+        entry.showBarText = value;
+        root.settings = entry;
+        if (root.bar && root.bar.shell && typeof root.bar.shell.updateEntryInline === "function")
+            root.bar.shell.updateEntryInline(root.moduleName, entry);
+    }
     property bool toolsExpanded: false
     property var workspaceNames: []
     property string workspaceName: ""
@@ -227,7 +236,9 @@ BarWidget {
         id: button
         anchors.fill: parent
         bar: root.bar
-        text: "󰆊 ScreenHop"
+        text: root.showBarText ? "󰆊 ScreenHop" : "󰆊"
+        tooltipText: "ScreenHop"
+        Accessible.name: "ScreenHop"
         labelVisible: true
         onPressed: { if (root.opened) root.close(); else root.open(); }
     }
@@ -252,7 +263,17 @@ BarWidget {
             spacing: Style.space(10)
             Row {
                 width: parent.width
-                Label { text: "ScreenHop"; font.bold: true; font.pixelSize: Style.font.body * 1.4; width: parent.width - dismiss.width; anchors.verticalCenter: parent.verticalCenter }
+                Label { text: "ScreenHop"; font.bold: true; font.pixelSize: Style.font.body * 1.4; width: parent.width - dismiss.width - barTextButton.width - parent.spacing * 2; anchors.verticalCenter: parent.verticalCenter }
+                spacing: Style.space(8)
+                Button {
+                    id: barTextButton
+                    text: "Bar text"
+                    selected: root.showBarText
+                    bordered: true
+                    focusable: true
+                    Accessible.name: root.showBarText ? "Hide ScreenHop text in the bar" : "Show ScreenHop text in the bar"
+                    onClicked: root.setBarText(!root.showBarText)
+                }
                 Button { id: dismiss; text: "Close"; focusable: true; onClicked: root.close() }
             }
             Label { width: parent.width; text: "YOUR WEBSITE, ON EVERY SCREEN"; font.pixelSize: Style.font.bodySmall; opacity: 0.65 }

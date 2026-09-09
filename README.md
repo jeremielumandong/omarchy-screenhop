@@ -185,3 +185,7 @@ Install the build dependencies first (Arch package names: `base-devel`, `pkgconf
 New tabs keep device emulation but use separate browser windows without skins. Switching to linked WebRTC requires confirmation and reopens pages; unsaved state and sign-ins do not transfer. Workspace saving and batch screenshots are disabled in native mode. Use the desktop screenshot tool for native captures. This is Chromium emulation, not a physical-device or Safari emulator; Cloudflare compatibility and performance gains are not guaranteed.
 
 Native profiles are retained under `$XDG_STATE_HOME/screenhop/native` (normally `~/.local/state/screenhop/native`). Each device configuration uses its own reusable profile slots. Profiles are separate from WebRTC, so sign-ins and browser extensions may need setup in each profile. No measured speedup or reduced memory use is promised: the local QA probe used approximately 583 MiB for one preview and 2.1 GiB for four.
+
+### Icon-only bar button
+
+Open ScreenHop and switch off **Bar text** beside **Close** to show only its icon in the desktop bar. The tooltip still identifies ScreenHop. The choice is saved in the plugin’s inline `showBarText` setting and survives shell restarts. Switch **Bar text** on to restore the label.
