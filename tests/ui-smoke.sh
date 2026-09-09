@@ -10,10 +10,12 @@ done
 mkdir -p "$test_dir/bin"
 cat > "$test_dir/bin/omarchy-shell" <<'SH'
 #!/bin/sh
-[ "$1" = shell ] && [ "$2" = rescanPlugins ] && [ "$#" = 2 ] || exit 99
-printf ok
+printf called > "$SCREENHOP_FORBIDDEN_SHELL_CALL"
+exit 99
 SH
 chmod +x "$test_dir/bin/omarchy-shell"
+cp "$test_dir/bin/omarchy-shell" "$test_dir/bin/omarchy"
+export SCREENHOP_FORBIDDEN_SHELL_CALL="$test_dir/forbidden-shell-call"
 export PATH="$test_dir/bin:$PATH"
 cp "$plugin_dir/Widget.qml" "$plugin_dir/devices.json" "$test_dir/"
 cp "$plugin_dir/tests/ui-smoke.qml" "$test_dir/shell.qml"
@@ -66,3 +68,5 @@ rg -q 'PASS ScreenHop catalog' "$test_dir/output.log"
 if rg 'ERROR|TypeError|ReferenceError|Cannot assign|Cannot open:|Error: (Catalog|Search|Unlink|Link|Launch|Second)' "$test_dir/output.log"; then
     exit 1
 fi
+
+[[ ! -e "$SCREENHOP_FORBIDDEN_SHELL_CALL" ]]

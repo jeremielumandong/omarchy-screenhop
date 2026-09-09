@@ -109,9 +109,9 @@ ShellRoot {
                 widget.repositoryUpdate(true);
             } else if (stage === 14) {
                 check(widget.pickerReloadNeeded && widget.availableCommit === "", "Successful update should offer picker reload");
-                widget.reloadPicker();
+                widget.dismissUpdate();
             } else {
-                check(!widget.pickerReloadNeeded && !widget.opened, "Reload must refresh the registry and close the picker without restarting the shell");
+                check(!widget.pickerReloadNeeded && !widget.opened, "Done must clear the update notice and close only the picker");
                 console.log("PASS ScreenHop catalog, search, frame/native launches, linked toggle, auth pause and panel creation");
                 widget.close();
                 Qt.quit();

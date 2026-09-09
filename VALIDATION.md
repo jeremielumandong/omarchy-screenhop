@@ -1,4 +1,8 @@
-# ScreenHop 1.0.3 validation
+# ScreenHop 1.0.4 validation
+
+The picker regression passed with the Done action exercised and both `omarchy` and `omarchy-shell` replaced by fail-and-record stubs. Neither command was invoked. The update notice cleared and only the picker closed. Source review confirms the picker contains no shell restart or registry refresh command. Export/plugin validation and displayed-version consistency checks passed. This supersedes the 1.0.3 mocked-refresh evidence, which did not cover desktop-wide plugin unload behavior.
+
+## Previous 1.0.3 validation
 
 The picker reload regression exercises the Reload picker action using a mocked `omarchy-shell shell rescanPlugins` command and verifies successful completion without a shell restart. The existing catalog, bar text, rendering-mode and updater UI checks also passed. This does not claim a full live-desktop recovery test on the affected machine. Export/plugin validation and version consistency are checked for this patch. Earlier renderer evidence is retained below.
 

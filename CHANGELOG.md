@@ -1,3 +1,21 @@
+# ScreenHop 1.0.4
+
+Remove **Reload picker** entirely. The 1.0.3 registry-refresh approach still unloaded desktop-wide plugin panels and services and was reported to disrupt the shell. After installing or building, **Done** now only clears the update notice and closes ScreenHop. It invokes no shell restart or registry refresh.
+
+The update controls, first-time native builds, optional native renderer and Bar text toggle remain available. Existing previews stay open until you choose to close and reopen them after saving work.
+
+Validation: the picker regression exercises Done, verifies that the notice clears and the picker closes, and fails if either `omarchy` or `omarchy-shell` is invoked. It passed. Exported plugin validation and displayed-version consistency checks passed. This does not claim a recovery test on the affected desktop.
+
+Update from a separate terminal and avoid the older Reload picker button:
+
+```sh
+omarchy plugin update arkane.screenhop --yes
+```
+
+If the desktop shell is already unavailable, recover it by running `omarchy restart shell` from an independent terminal or a logged-in TTY. If an old picker remains cached after updating, the same command can reload the shell from that independent terminal.
+
+---
+
 # ScreenHop 1.0.3
 
 - Fix **Reload picker** stopping the entire Omarchy shell. It now requests a plugin-registry refresh through `omarchy-shell shell rescanPlugins` without restarting the shell process.

@@ -6,7 +6,7 @@ Built for developers testing responsive websites. See how your site adapts acros
 
 Link supported interactions across previews and save screenshots or short recordings to share what you find. No browser extension, npm setup, or cloud account required.
 
-**Version 1.0.3 · 103 presets · Custom viewports · MIT-licensed code**
+**Version 1.0.4 · 103 presets · Custom viewports · MIT-licensed code**
 
 - **Spot layout problems sooner.** Compare multiple device sizes in centered, borderless preview windows.
 - **Repeat less, compare more.** Optionally link matching clicks, text input, scrolling and supported navigation across previews.
@@ -58,7 +58,7 @@ Clicks match visible unique semantic labels and text, with generated IDs as a la
 
 ## First-release scope
 
-ScreenHop 1.0.3 runs its device previews on your desktop. Phone remote control, QR pairing, LAN sharing, certificate setup and firewall automation are not included. Phone and tablet presets still provide responsive layouts and touch-input emulation inside desktop preview windows.
+ScreenHop 1.0.4 runs its device previews on your desktop. Phone remote control, QR pairing, LAN sharing, certificate setup and firewall automation are not included. Phone and tablet presets still provide responsive layouts and touch-input emulation inside desktop preview windows.
 
 The preview HTTP/WebSocket control listener and browser debugging endpoints are loopback-only. Screenshots, recordings, linked interactions and saved workspaces remain available locally. Websites loaded in previews still use their normal network connections.
 
@@ -192,4 +192,4 @@ Open ScreenHop and switch off **Bar text** beside **Close** to show only its ico
 
 ### Update from the picker
 
-Click **Check for updates** in the main ScreenHop picker (available in both rendering modes), then **Install update…** and confirm. The updater installs the exact checked commit, refuses local edits or diverged branches, and builds the native host, including on its first installation. If the source is already current, **Build native previews** builds or retries it without requiring another release. The documented compiler and Qt dependencies must be installed separately; the updater does not install system packages. A build failure leaves the downloaded source in place and reports how to retry; WebRTC remains available. Copied installations must be reinstalled through Omarchy to use Git updates. Click **Reload picker** after success; this refreshes the plugin registry without stopping the Omarchy shell. Existing previews remain open until you choose to close and reopen them. **Check build → Restart previews…** separately restarts WebRTC previews against the installed code; it does not download updates.
+Click **Check for updates** in the main ScreenHop picker (available in both rendering modes), then **Install update…** and confirm. The updater installs the exact checked commit, refuses local edits or diverged branches, and builds the native host, including on its first installation. If the source is already current, **Build native previews** builds or retries it without requiring another release. The documented compiler and Qt dependencies must be installed separately; the updater does not install system packages. A build failure leaves the downloaded source in place and reports how to retry; WebRTC remains available. Copied installations must be reinstalled through Omarchy to use Git updates. Click **Done** after success to dismiss the notice and close ScreenHop. This does not restart the shell or reload its plugins. If an older picker remains cached, restart the shell from a separate terminal after saving your work; ScreenHop does not do this automatically. Existing previews remain open until you choose to close and reopen them. **Check build → Restart previews…** separately restarts WebRTC previews against the installed code; it does not download updates.

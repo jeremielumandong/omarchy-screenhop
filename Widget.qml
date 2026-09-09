@@ -8,7 +8,7 @@ import qs.Ui
 BarWidget {
     id: root
     moduleName: "arkane.screenhop"
-    Component.onCompleted: console.info("ScreenHop 1.0.3 widget loaded:", pluginDirectory, "initial URL:", website)
+    Component.onCompleted: console.info("ScreenHop 1.0.4 widget loaded:", pluginDirectory, "initial URL:", website)
     readonly property bool showBarText: setting("showBarText", true)
     function setBarText(value) {
         var entry = {id: root.moduleName};
@@ -40,11 +40,11 @@ BarWidget {
             } catch (error) { /* Keep the last progress message. */ }
         } }
     }
-    function reloadPicker() { if (!busy) updateAcknowledger.running = true; }
+    function dismissUpdate() { if (!busy) updateAcknowledger.running = true; }
     Process {
         id: updateAcknowledger
         command: ["node", root.pluginDirectory + "plugin-update.mjs", "--acknowledge"]
-        onExited: (exitCode, exitStatus) => { if (exitCode === 0) pickerReloader.running = true; else root.updateMessage = "Could not clear update status. Close and reopen ScreenHop, then retry."; }
+        onExited: (exitCode, exitStatus) => { if (exitCode === 0) { root.pickerReloadNeeded = false; root.updateMessage = ""; root.close(); } else root.updateMessage = "Could not clear update status. Close and reopen ScreenHop, then retry."; }
     }
     function repositoryUpdate(install) {
         if (busy) return;
@@ -71,14 +71,6 @@ BarWidget {
         onExited: (exitCode, exitStatus) => {
             root.confirmDownload = false;
             if (exitCode !== 0 && (root.updateMessage === "Checking for updates…" || root.updateMessage === "Installing update…")) root.updateMessage = "Update failed. Check your connection and installation, then retry.";
-        }
-    }
-    Process {
-        id: pickerReloader
-        command: ["omarchy-shell", "shell", "rescanPlugins"]
-        onExited: (exitCode, exitStatus) => {
-            if (exitCode === 0) { root.pickerReloadNeeded = false; root.close(); }
-            else root.updateMessage = "Could not refresh the plugin registry. Close and reopen ScreenHop, then retry.";
         }
     }
     property bool toolsExpanded: false
@@ -111,7 +103,7 @@ BarWidget {
     property string selectedId: ""
     property string status: "Choose a device to open a browser preview."
     property string launchError: ""
-    readonly property bool busy: launcher.running || linkUpdater.running || workspaceRunner.running || repositoryUpdater.running || pickerReloader.running || updateInProgress || updateAcknowledger.running
+    readonly property bool busy: launcher.running || linkUpdater.running || workspaceRunner.running || repositoryUpdater.running || updateInProgress || updateAcknowledger.running
     readonly property string pluginDirectory: decodeURIComponent(Qt.resolvedUrl(".").toString().replace(/^file:\/\//, "")).replace(/\/?$/, "/")
     readonly property var groups: {
         var result = [];
@@ -345,7 +337,7 @@ BarWidget {
                 Button { text: "Check for updates"; bordered: true; focusable: true; enabled: !root.busy; onClicked: root.repositoryUpdate(false) }
                 Button { text: "Install update…"; visible: root.availableCommit !== ""; bordered: true; focusable: true; enabled: !root.busy; onClicked: root.confirmDownload = true }
                 Button { text: "Build native previews"; visible: root.checkedInstalledCommit !== "" && root.availableCommit === ""; bordered: true; focusable: true; enabled: !root.busy; onClicked: root.confirmDownload = true }
-                Button { text: "Reload picker"; visible: root.pickerReloadNeeded; bordered: true; focusable: true; enabled: !root.busy; onClicked: root.reloadPicker() }
+                Button { text: "Done"; visible: root.pickerReloadNeeded; bordered: true; focusable: true; enabled: !root.busy; onClicked: root.dismissUpdate() }
             }
             Label { width: parent.width; visible: root.updateMessage !== ""; text: root.updateMessage; font.pixelSize: Style.font.bodySmall }
             Column {
@@ -504,7 +496,7 @@ BarWidget {
                             Button { text: root.batchSkin ? "✓ Include skin" : "Page only"; selected: root.batchSkin; bordered: true; focusable: true; enabled: !root.busy; onClicked: root.batchSkin = !root.batchSkin }
                             Button { text: "Screenshot all"; bordered: true; focusable: true; enabled: !root.busy && root.deviceFrame; onClicked: root.workspaceAction(root.batchSkin ? ["--batch"] : ["--batch", "--page-only"]) }
                         }
-                        Label { width: parent.width; text: "ScreenHop 1.0.3 · " + (root.buildStatus || "Check the running build before applying an update."); font.pixelSize: Style.font.bodySmall }
+                        Label { width: parent.width; text: "ScreenHop 1.0.4 · " + (root.buildStatus || "Check the running build before applying an update."); font.pixelSize: Style.font.bodySmall }
                         Row {
                             spacing: Style.space(6)
                             Button { text: "Check build"; bordered: true; focusable: true; enabled: !root.busy; onClicked: root.workspaceAction(["--status"]) }

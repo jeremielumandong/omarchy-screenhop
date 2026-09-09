@@ -34,7 +34,7 @@ export async function installUpdate(folder,installed,commit){
  catch{throw Error('The update downloaded but plugin validation failed. The picker was not reloaded. Review the installation before using it.');}
  try{await exec('bash',[join(folder,'scripts/build-native.sh')],{env,timeout:180000,maxBuffer:2*1024*1024});}
  catch{throw Error('Source code is current, but building native previews failed. Install the build dependencies listed in README.md, then check for updates and choose Build native previews to retry. WebRTC remains available.');}
- return {status:'installed',version:latest.version,commit,message:'ScreenHop '+latest.version+' installed; native previews built. Reload the picker, then close and reopen existing previews when your work is saved.'};
+ return {status:'installed',version:latest.version,commit,message:'ScreenHop '+latest.version+' installed; native previews built. Choose Done to close this panel. Close and reopen existing previews when your work is saved.'};
 }
 async function progressFile(){return resolve(here,await git(here,['rev-parse','--git-path','screenhop-update.json']));}
 async function saveProgress(value){const file=await progressFile(),temp=file+'.'+process.pid;await writeFile(temp,JSON.stringify(value),{mode:0o600});await rename(temp,file);}
