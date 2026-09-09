@@ -1,4 +1,3 @@
-import {browserEnvironment,fetch} from './helpers/phone-tls.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {mkdtemp,readFile} from 'node:fs/promises';
@@ -18,7 +17,7 @@ async function eventually(fn,description) {
 
 // Chromium shares its HTTP/1 connection pool between preview windows. Seven
 // viewers exceed the six-connection pool and expose persistent-stream starvation.
-test('seven desktop and seven phone viewers connect, receive video and remain interactive',{timeout:150000},async()=>{
+test('seven desktop previews connect, receive video and remain interactive',{timeout:150000},async()=>{
  const state=await mkdtemp('/tmp/screenhop-multi-preview-');
  const fixture=createServer((req,res)=>{
   res.setHeader('Content-Type','text/html');
@@ -26,9 +25,9 @@ test('seven desktop and seven phone viewers connect, receive video and remain in
  });
  await new Promise(r=>fixture.listen(0,'127.0.0.1',r));
  const url='http://127.0.0.1:'+fixture.address().port;
- const run=async(...args)=>JSON.parse((await exec(process.execPath,[helper,'--state',state,...args],{timeout:40000,env:browserEnvironment()})).stdout);
+ const run=async(...args)=>JSON.parse((await exec(process.execPath,[helper,'--state',state,...args],{timeout:40000})).stdout);
  let source,viewer;
- const previews=[],phoneTargets=[];
+ const previews=[];
  const evaluate=async(cdp,session,expression)=>(await cdp.send('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true},session)).result.value;
  const evalView=(session,expression)=>evaluate(viewer,session,expression);
  const live=session=>evalView(session,'typeof rtcMode !== "undefined" && rtcMode === "webrtc" && rtcVideo.videoWidth === 200 && rtcVideo.videoHeight === 300');
@@ -49,29 +48,17 @@ test('seven desktop and seven phone viewers connect, receive video and remain in
    await eventually(()=>live(preview.view),`desktop viewer ${i+1} receives WebRTC video`);
   }
   for(const preview of previews)await click(preview.view,preview.page,1);
-  const paired=await run('--phone','on');
-  assert.equal(paired.enabled,true);
-  const remoteBase=new URL(paired.url);remoteBase.hostname='127.0.0.1';
-  for(const [i,preview] of previews.entries()){
-   const {targetId}=await viewer.send('Target.createTarget',{url:new URL('view/'+preview.targetId,remoteBase).href});
-   phoneTargets.push(targetId);
-   preview.phone=(await viewer.send('Target.attachToTarget',{targetId,flatten:true})).sessionId;
-   await eventually(()=>live(preview.phone),`phone viewer ${i+1} receives WebRTC video`);
-  }
-  for(const preview of previews)await click(preview.phone,preview.page,2);
   // Signaling still works after saturation, including reopening a peer.
   const first=previews[0];
   const previous=await evalView(first.view,'rtcPeerId');
   await evalView(first.view,'startRTC();true');
-  await eventually(async()=>await live(first.view)&&await evalView(first.view,'rtcPeerId')!==previous,'desktop video renegotiates with fourteen viewers open');
-  await click(first.view,first.page,3);
-  console.log('Seven desktop + seven phone WebRTC receivers and all fourteen input paths passed at 200 × 300 CSS px.');
+  await eventually(async()=>await live(first.view)&&await evalView(first.view,'rtcPeerId')!==previous,'desktop video renegotiates with seven viewers open');
+  await click(first.view,first.page,2);
+  console.log('Seven desktop WebRTC receivers and all seven input paths passed at 200 × 300 CSS px.');
  }catch(error){
   for(const [i,p] of previews.entries())console.log('Preview',i+1,await evalView(p.view,'({mode:typeof rtcMode === "undefined"?"unloaded":rtcMode,status:document.querySelector("#status-text")?.textContent})').catch(()=>null));
   throw error;
  }finally{
-  for(const targetId of phoneTargets)await viewer?.send('Target.closeTarget',{targetId}).catch(()=>{});
-  await run('--phone','off').catch(()=>{});
   source?.ws.close();viewer?.ws.close();
   await run('--close').catch(()=>{});
   fixture.closeAllConnections();await new Promise(r=>fixture.close(r));

@@ -16,7 +16,6 @@ body{display:block}.stage{width:100%;height:100%;padding:68px 24px;background:ra
 @media(max-width:540px){.stage{padding:64px 14px}.controls .pill{padding:7px}.navigation{padding:0}}
 @media(prefers-reduced-motion:no-preference){.floating-tools{transition:opacity .15s,visibility .15s}}
 
-.phone-keyboard{display:none}.phone .phone-keyboard{position:fixed;z-index:9;bottom:14px;left:14px;display:flex;flex-direction:column;align-items:flex-start;gap:7px;max-width:calc(100vw - 72px)}.phone-keyboard-toggle{min-height:38px;padding:8px 12px;font-size:12px;background:#292c33ed;border:1px solid #ffffff18;border-radius:9px}.phone-keyboard-panel{padding:10px;background:#25272df2;border:1px solid #ffffff18;border-radius:11px;width:min(300px,calc(100vw - 72px));box-shadow:0 8px 28px #0005}.phone-keyboard-panel[hidden]{display:none}.phone-keyboard-panel label{font-size:11px;color:#bec5d1;display:block;line-height:1.5;margin-bottom:7px}.phone-keyboard-panel textarea{display:block;resize:none;width:100%;height:39px;min-height:39px;border-radius:7px;padding:8px;background:#191c22;border:1px solid #8eaefc66;color:#e6edf9;font:16px system-ui;outline-offset:2px}.phone-keyboard-panel .keyboard-actions{display:flex;gap:6px;margin-top:7px}.keyboard-actions button{border:1px solid #ffffff18;border-radius:6px;min-height:34px;padding:5px 9px;font-size:11px}.phone .tools-toggle{width:38px;height:38px}.phone .stage{padding-bottom:76px;padding-top:76px}.phone .floating-tools button{min-height:38px}
 
 /* Original device silhouettes. Hardware stays outside the exact, rectangular CSS viewport. */
 .device{--stand-height:0px}.device.desktop{--stand-height:32px}.hardware-top,.hardware-bottom{flex-shrink:0}.screen{flex-shrink:0}
@@ -39,7 +38,7 @@ body{display:block}.stage{width:100%;height:100%;padding:68px 24px;background:ra
 .rtc-video{display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:fill;pointer-events:none}.screen.rtc-live .rtc-video{display:block}.screen.rtc-live #display{visibility:hidden}
 
 .capture-tools{padding-top:9px;border-top:1px solid #ffffff12;display:flex;flex-direction:column;gap:8px}.capture-option{display:flex;align-items:center;gap:7px;font-size:11px;color:#c7ceda}.capture-option input{accent-color:#abc6ff;width:14px;height:14px;margin:0}.capture-actions{display:flex;gap:7px}.capture-actions button{flex:1;padding:8px;border:1px solid #ffffff19;border-radius:8px;font-size:11px}.capture-actions button[aria-pressed=true]{color:#ffc4c4;background:#ff7e7e12;border-color:#ff999944}.capture-hint{font-size:10px;line-height:1.5;color:#9099a9;margin:0}.recording-status{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);z-index:12;display:flex;gap:9px;align-items:center;height:38px;padding:5px 7px 5px 11px;background:#292b32f5;border:1px solid #ed929240;border-radius:9px;box-shadow:0 4px 18px #0005;font-size:11px;font-variant-numeric:tabular-nums}.recording-status[hidden]{display:none}.recording-status .record-dot{width:6px;height:6px;border-radius:50%;background:#fa9696}.recording-status button{padding:5px 8px;min-height:27px;border-radius:6px;background:#ffffff0b;font-size:11px}.capture-region{position:absolute;inset:-12px;pointer-events:none}.capture-download{display:none}
-.recording-skin #toast,.recording-skin #phone-keyboard-panel,.recording-skin .floating-tools{visibility:hidden!important;pointer-events:none!important}
+.recording-skin #toast,.recording-skin .floating-tools{visibility:hidden!important;pointer-events:none!important}
 .performance-tools{border-top:1px solid #ffffff12;padding-top:8px;font-size:11px}.performance-tools select{background:#30333b;color:inherit;border:1px solid #ffffff25;border-radius:5px;padding:4px}.performance-tools summary{cursor:pointer;margin-top:8px}.performance-tools pre{white-space:pre-wrap;font:10px/1.6 system-ui;color:#b4bed0;margin-bottom:0}.link-state{font-size:10px;color:#b4bed0;line-height:1.5}.floating-tools{max-height:calc(100dvh - 70px);overflow:auto}
 .touch-preview{cursor:none}.touch-indicator{position:absolute;width:26px;height:26px;border:1.5px solid #fff9;border-radius:50%;background:#ffffff25;box-shadow:0 0 0 1px #0005;transform:translate(-50%,-50%);pointer-events:none;z-index:4}.touch-indicator.pressed{background:#ffffff66;border-color:white}.touch-indicator[hidden]{display:none}
 
@@ -62,15 +61,10 @@ body{display:block}.stage{width:100%;height:100%;padding:68px 24px;background:ra
 <main class="stage" id="stage"><div class="preview-group"><div class="preview-label"><strong id="preview-name"></strong><span id="preview-size"></span></div><div class="fit-box" id="fit-box"><div class="capture-region" id="capture-region" aria-hidden="true"></div><div class="device" id="device"><div class="hardware-top" aria-hidden="true"><span class="clock">9:41</span><span class="camera"></span><span class="system-icons"><svg viewBox="0 0 20 20"><path d="M2 15v-2m4 2v-5m4 5V7m4 8V4"/></svg><svg viewBox="0 0 20 20"><path d="M2 7a12 12 0 0 1 16 0M5 10a8 8 0 0 1 10 0m-7 3a3 3 0 0 1 4 0m-2 3h.01"/></svg><svg viewBox="0 0 22 20"><rect x="1" y="5" width="16" height="10" rx="2"/><path d="M20 8v4M4 8h10v4H4z"/></svg></span></div><div class="screen" id="screen" tabindex="0" role="application" aria-label="Interactive device preview. Click to focus; keyboard and pointer input control the website."><span id="touch-indicator" class="touch-indicator" hidden aria-hidden="true"></span><img id="display" alt="Live website preview" draggable="false"><video id="rtc-video" class="rtc-video" autoplay muted playsinline aria-label="Live website video"></video><div class="loading" id="loading">Connecting to your preview…</div></div><div class="hardware-bottom" aria-hidden="true"></div></div></div></div><div class="toast" id="toast" role="alert" hidden></div></main>
 <footer class="footer"><span id="footer-device"></span><span class="separator">·</span><span id="scale"></span><span class="separator">·</span><span>ScreenHop 1.0.0</span></footer>
 <div id="recording-status" class="recording-status" role="status" hidden><span class="record-dot" aria-hidden="true"></span><span id="recording-time">00:00</span><button id="capture-stop" type="button" aria-label="Stop recording and save video">Stop</button></div>
-<section class="phone-keyboard" aria-label="Phone keyboard controls">
- <button id="phone-keyboard-toggle" class="phone-keyboard-toggle" aria-expanded="false" aria-controls="phone-keyboard-panel">Keyboard</button>
- <div id="phone-keyboard-panel" class="phone-keyboard-panel" hidden><label for="phone-keyboard-input">Tap a field in the preview, then type here.</label><textarea id="phone-keyboard-input" rows="1" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="text" aria-label="Type into the selected preview field"></textarea><div class="keyboard-actions"><button id="phone-backspace" type="button">Backspace</button><button id="phone-enter" type="button">Enter</button><button id="phone-keyboard-done" type="button">Done</button></div></div>
-</section>
 <script>
 'use strict';
 const config = __SCREENHOP_CONFIG__;
-const phone = config.phone === true, mobileInput = config.mobile === true;
-document.body.classList.toggle('phone', phone);
+const mobileInput = config.mobile === true;
 const $ = id => document.getElementById(id);
 const screen = $('screen'), display = $('display'), device = $('device');
 screen.classList.toggle('touch-preview',mobileInput);
@@ -223,7 +217,6 @@ $('frame').addEventListener('click', () => { showFrame = !showFrame; try { local
 function point(event) { const rect = screen.getBoundingClientRect(); return {x:Math.max(0,Math.min(width - .01,(event.clientX - rect.left) * width / rect.width)),y:Math.max(0,Math.min(height - .01,(event.clientY - rect.top) * height / rect.height))}; }
 function modifiers(event) { return (event.altKey ? 1:0) | (event.ctrlKey ? 2:0) | (event.metaKey ? 4:0) | (event.shiftKey ? 8:0); }
 const buttonName = index => ['left','middle','right'][index] || 'none';
-let touchGesture = null;
 let clickCount = 1, previousClick = {time:0,x:0,y:0,button:-1}, capturedPointer = null, lastPoint = {x:0,y:0}, heldButton = 'left';
 screen.addEventListener('pointerdown', event => {
  if (capturedPointer !== null || (mobileInput && event.button !== 0)) return;
@@ -233,20 +226,12 @@ screen.addEventListener('pointerdown', event => {
  previousClick = {...p,time:now,button:event.button}; capturedPointer = event.pointerId; lastPoint = p; heldButton = buttonName(event.button);
  screen.setPointerCapture(event.pointerId);
  if (mobileInput) { indicateTouch(event,true); input({kind:'touch',type:'touchStart',...p,modifiers:modifiers(event)}); return; }
- if (phone && event.pointerType === 'touch') { touchGesture = {startX:event.clientX,startY:event.clientY,lastX:event.clientX,lastY:event.clientY,swiping:false}; return; }
  input({kind:'mouse',type:'mousePressed',...p,button:heldButton,buttons:event.buttons,clickCount,modifiers:modifiers(event)});
 });
 let movePending = null, moveScheduled = false;
 function flushMove() { if (movePending) { input(movePending); movePending = null; } }
 screen.addEventListener('pointermove', event => {
  if (mobileInput) { indicateTouch(event); if (event.pointerId !== capturedPointer) return; lastPoint = point(event); movePending = {kind:'touch',type:'touchMove',...lastPoint,modifiers:modifiers(event)}; if (!moveScheduled) { moveScheduled = true; requestAnimationFrame(() => { moveScheduled = false; flushMove(); }); } return; }
- if (touchGesture) {
-  if (event.pointerId !== capturedPointer) return;
-  const gesture = touchGesture, rect = screen.getBoundingClientRect();
-  if (Math.hypot(event.clientX - gesture.startX,event.clientY - gesture.startY) > 7) gesture.swiping = true;
-  if (gesture.swiping) { input({kind:'wheel',...point(event),deltaX:(gesture.lastX - event.clientX)*width/rect.width,deltaY:(gesture.lastY - event.clientY)*height/rect.height,modifiers:0}); gesture.lastX = event.clientX; gesture.lastY = event.clientY; }
-  return;
- }
  lastPoint = point(event);
  movePending = {kind:'mouse',type:'mouseMoved',...lastPoint,button:event.buttons ? heldButton:'none',buttons:event.buttons,clickCount:0,modifiers:modifiers(event)};
  if (!moveScheduled) { moveScheduled = true; requestAnimationFrame(() => { moveScheduled = false; flushMove(); }); }
@@ -255,14 +240,10 @@ screen.addEventListener('pointerleave', () => { touchIndicator.hidden = true; if
 screen.addEventListener('pointerup', event => {
  if (capturedPointer !== event.pointerId) return;
  if (mobileInput) { flushMove(); input({kind:'touch',type:'touchEnd'}); capturedPointer = null; screen.releasePointerCapture(event.pointerId); indicateTouch(event,false); if(event.pointerType === 'touch') touchIndicator.hidden = true; return; }
- if (touchGesture) {
-  if (!touchGesture.swiping) { const p = point(event); input({kind:'mouse',type:'mousePressed',...p,button:'left',buttons:1,clickCount,modifiers:0}); input({kind:'mouse',type:'mouseReleased',...p,button:'left',buttons:0,clickCount,modifiers:0}); }
-  touchGesture = null; capturedPointer = null; screen.releasePointerCapture(event.pointerId); return;
- }
  flushMove(); input({kind:'mouse',type:'mouseReleased',...point(event),button:heldButton,buttons:event.buttons,clickCount,modifiers:modifiers(event)});
  capturedPointer = null; screen.releasePointerCapture(event.pointerId);
 });
-function releasePointer() { if (mobileInput) { movePending = null; if (capturedPointer !== null) input({kind:'touch',type:'touchCancel'}); capturedPointer = null; touchIndicator.hidden = true; return; } if (touchGesture) { touchGesture = null; capturedPointer = null; return; } if (capturedPointer !== null) { input({kind:'mouse',type:'mouseReleased',...lastPoint,button:heldButton,buttons:0,clickCount:1,modifiers:0}); capturedPointer = null; } }
+function releasePointer() { if (mobileInput) { movePending = null; if (capturedPointer !== null) input({kind:'touch',type:'touchCancel'}); capturedPointer = null; touchIndicator.hidden = true; return; } if (capturedPointer !== null) { input({kind:'mouse',type:'mouseReleased',...lastPoint,button:heldButton,buttons:0,clickCount:1,modifiers:0}); capturedPointer = null; } }
 screen.addEventListener('pointercancel', releasePointer);
 screen.addEventListener('lostpointercapture', releasePointer);
 screen.addEventListener('contextmenu', event => event.preventDefault());
@@ -289,32 +270,6 @@ screen.addEventListener('compositionend', event => { if (event.data) input({kind
 function releaseKeys() { for (const data of heldKeys.values()) { const up = {...data,type:'keyUp',modifiers:0}; delete up.text; input(up); } heldKeys.clear(); }
 screen.addEventListener('blur', releaseKeys);
 window.addEventListener('blur', () => { releaseKeys(); releasePointer(); });
-// The helper is a transient input bridge: never retain typed text or read the clipboard.
-if (phone) {
- const keyboard = $('phone-keyboard-input'), keyboardPanel = $('phone-keyboard-panel');
- const seed = '\u200b';
- let composing = false;
- function clearKeyboard() { keyboard.value = seed; keyboard.setSelectionRange(1,1); }
- function keyPress(key,code,keyCode) { input({kind:'key',type:'keyDown',key,code,keyCode,modifiers:0,...(key === 'Enter' ? {text:'\r'} : {})}); input({kind:'key',type:'keyUp',key,code,keyCode,modifiers:0}); }
- function commitKeyboard() { const text = keyboard.value.replaceAll(seed,''); if (text) input({kind:'text',text}); clearKeyboard(); }
- function closeKeyboard() { composing = false; clearKeyboard(); keyboard.blur(); keyboardPanel.hidden = true; $('phone-keyboard-toggle').setAttribute('aria-expanded','false'); }
- $('phone-keyboard-toggle').addEventListener('click', () => { keyboardPanel.hidden = false; $('phone-keyboard-toggle').setAttribute('aria-expanded','true'); clearKeyboard(); keyboard.focus({preventScroll:true}); });
- $('phone-keyboard-done').addEventListener('click', closeKeyboard);
- $('phone-backspace').addEventListener('click', () => { keyPress('Backspace','Backspace',8); clearKeyboard(); keyboard.focus({preventScroll:true}); });
- $('phone-enter').addEventListener('click', () => { keyPress('Enter','Enter',13); clearKeyboard(); keyboard.focus({preventScroll:true}); });
- keyboard.addEventListener('beforeinput', event => {
-  if (composing || event.isComposing) return;
-  if (event.inputType === 'deleteContentBackward' || event.inputType === 'deleteContentForward') { event.preventDefault(); const backwards = event.inputType === 'deleteContentBackward'; keyPress(backwards ? 'Backspace':'Delete',backwards ? 'Backspace':'Delete',backwards ? 8:46); clearKeyboard(); }
-  else if (event.inputType === 'insertLineBreak' || event.inputType === 'insertParagraph') { event.preventDefault(); keyPress('Enter','Enter',13); clearKeyboard(); }
- });
- keyboard.addEventListener('input', event => { if (!composing && !event.isComposing) commitKeyboard(); });
- keyboard.addEventListener('compositionstart', () => { composing = true; });
- keyboard.addEventListener('compositionend', () => { composing = false; commitKeyboard(); });
- keyboard.addEventListener('paste', event => { event.preventDefault(); const text = event.clipboardData?.getData('text/plain'); if (text) input({kind:'text',text}); clearKeyboard(); });
- keyboard.addEventListener('blur', () => { composing = false; clearKeyboard(); });
- window.addEventListener('pagehide', () => { keyboard.value = ''; });
- clearKeyboard();
-}
 // Native tab video is negotiated over the authenticated local signaling endpoint.
 const rtcVideo = $('rtc-video');
 let rtcPeer = null, rtcPeerId = null, rtcMode = 'jpeg', rtcGeneration = 0, rtcTimer = null;

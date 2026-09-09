@@ -16,7 +16,6 @@ BarWidget {
     property bool updateAvailable: false
     property bool confirmUpdate: false
     property bool batchSkin: true
-    property int phoneViewers: 0
     property bool opened: false
     property bool popoutSwitchClosing: false
     property var devices: []
@@ -30,15 +29,6 @@ BarWidget {
     property string website: "https://omarchy.org"
     property bool landscape: false
     property bool deviceFrame: true
-    property bool phoneEnabled: false
-    property string phoneUrl: ""
-    property string phoneQrData: ""
-    property string phoneReason: ""
-    property bool phoneReplyReceived: false
-    property bool phoneFirewallPending: false
-    property bool firewallReplyReceived: false
-    property bool firewallRetry: true
-    property string firewallMessage: ""
     property bool linked: false
     property bool pendingLinked: false
     property bool launchReplyReceived: false
@@ -47,7 +37,7 @@ BarWidget {
     property string selectedId: ""
     property string status: "Choose a device to open a browser preview."
     property string launchError: ""
-    readonly property bool busy: launcher.running || linkUpdater.running || phoneUpdater.running || phoneFirewall.running || workspaceRunner.running
+    readonly property bool busy: launcher.running || linkUpdater.running || workspaceRunner.running
     readonly property string pluginDirectory: decodeURIComponent(Qt.resolvedUrl(".").toString().replace(/^file:\/\//, "")).replace(/\/?$/, "/")
     readonly property var groups: {
         var result = [];
@@ -64,7 +54,7 @@ BarWidget {
                 && (!needle || (device.name + " " + device.group + " " + device.width + "x" + device.height).toLowerCase().indexOf(needle) >= 0);
         });
     }
-    function open() { opened = true; refreshLinked(); refreshPhone(); }
+    function open() { opened = true; refreshLinked(); }
     function close() { opened = false; }
     function closeForPopoutSwitch() {
         popoutSwitchClosing = true;
@@ -113,79 +103,6 @@ BarWidget {
         launchError = "";
         linkUpdater.command = ["node", pluginDirectory + helperName, "--link", value ? "on" : "off"];
         linkUpdater.running = true;
-    }
-    function refreshPhone() {
-        if (phoneUpdater.running) return;
-        phoneReplyReceived = false;
-        phoneFirewallPending = false;
-        phoneUpdater.command = ["node", pluginDirectory + "viewport.mjs", "--phone-status"];
-        phoneUpdater.running = true;
-    }
-    function setPhone(value) {
-        if (busy || (value && !deviceFrame)) return;
-        phoneReason = "";
-        firewallMessage = "";
-        firewallRetry = true;
-        phoneFirewallPending = value;
-        phoneReplyReceived = false;
-        phoneUpdater.command = ["node", pluginDirectory + "viewport.mjs", "--phone", value ? "on" : "off"];
-        phoneUpdater.running = true;
-    }
-    Process {
-        id: phoneUpdater
-        stdout: SplitParser {
-            onRead: data => {
-                try {
-                    var message = JSON.parse(data);
-                    if (message.status === "phone" && typeof message.enabled === "boolean") {
-                        root.phoneReplyReceived = true;
-                        root.phoneEnabled = message.enabled;
-                        root.phoneUrl = message.enabled ? (message.url || "") : "";
-                        root.phoneQrData = message.enabled ? (message.qrData || "") : "";
-                        root.phoneReason = message.reason || "";
-                        root.phoneViewers = message.connectedViewers || 0;
-                    }
-                } catch (error) { /* Ignore diagnostic lines. */ }
-            }
-        }
-        stderr: SplitParser {
-            onRead: data => { if (data.trim()) root.phoneReason = data.trim(); }
-        }
-        onExited: (exitCode, exitStatus) => {
-            if ((exitCode !== 0 || !root.phoneReplyReceived) && !root.phoneReason)
-                root.phoneReason = "Could not update phone sharing.";
-            if (exitCode === 0 && root.phoneReplyReceived && root.phoneEnabled && root.phoneFirewallPending)
-                root.allowPhoneFirewall();
-            root.phoneFirewallPending = false;
-        }
-    }
-    function allowPhoneFirewall() {
-        if (!phoneEnabled || phoneFirewall.running) return;
-        firewallReplyReceived = false;
-        firewallMessage = "Checking Wi-Fi access. Enter your password in the system prompt if requested.";
-        phoneFirewall.command = ["node", pluginDirectory + "phone-firewall.mjs"];
-        phoneFirewall.running = true;
-    }
-    Process {
-        id: phoneFirewall
-        stdout: SplitParser {
-            onRead: data => {
-                try {
-                    var message = JSON.parse(data);
-                    if (typeof message.message === "string") {
-                        root.firewallReplyReceived = true;
-                        root.firewallMessage = message.message;
-                        root.firewallRetry = message.status !== "ready" && message.status !== "inactive";
-                    }
-                } catch (error) { /* Ignore diagnostic lines. */ }
-            }
-        }
-        onExited: (exitCode, exitStatus) => {
-            if (!root.firewallReplyReceived) {
-                root.firewallMessage = "Could not check Wi-Fi access. Use Allow Wi-Fi access to retry.";
-                root.firewallRetry = true;
-            }
-        }
     }
     FileView {
         path: root.pluginDirectory + "devices.json"
@@ -355,7 +272,6 @@ BarWidget {
                     onClicked: {
                         root.deviceFrame = !root.deviceFrame;
                         root.refreshLinked();
-                        root.refreshPhone();
                     }
                 }
                 Label {
@@ -384,69 +300,6 @@ BarWidget {
                     text: "Sync navigation, clicks, typing and scroll"
                     font.pixelSize: Style.font.bodySmall
                     opacity: 0.65
-                }
-            }
-            Row {
-                width: parent.width
-                spacing: Style.space(8)
-                Button {
-                    id: phoneButton
-                    text: root.phoneEnabled ? "Stop sharing" : "Phone remote"
-                    selected: root.phoneEnabled
-                    bordered: true
-                    focusable: true
-                    enabled: !root.busy && (root.deviceFrame || root.phoneEnabled)
-                    onClicked: root.setPhone(!root.phoneEnabled)
-                }
-                Label {
-                    width: parent.width - phoneButton.width - parent.spacing
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: root.firewallMessage || root.phoneReason || (root.deviceFrame ? "Phone remote requires a trusted HTTPS certificate. See README for setup." : "Phone remote requires Device frame.")
-                    font.pixelSize: Style.font.bodySmall
-                    opacity: 0.75
-                }
-            }
-            Row {
-                visible: root.phoneEnabled
-                width: parent.width
-                spacing: Style.space(12)
-                Image {
-                    id: phoneQr
-                    visible: root.phoneQrData.length > 0
-                    width: visible ? Style.space(124) : 0
-                    height: width
-                    source: root.phoneQrData
-                    fillMode: Image.PreserveAspectFit
-                    smooth: false
-                    Accessible.name: "Scan to open the ScreenHop phone remote"
-                }
-                Column {
-                    width: parent.width - (phoneQr.visible ? phoneQr.width + parent.spacing : 0)
-                    spacing: Style.space(6)
-                    Label {
-                        width: parent.width
-                        text: "Open this HTTPS address on your phone. Never bypass a certificate warning. Choose a preview to control."
-                        font.pixelSize: Style.font.bodySmall
-                    }
-                    Button {
-                        visible: root.firewallRetry || phoneFirewall.running
-                        text: phoneFirewall.running ? "Waiting for authorization…" : "Allow Wi-Fi access"
-                        bordered: true
-                        focusable: true
-                        enabled: !root.busy
-                        onClicked: root.allowPhoneFirewall()
-                    }
-                    TextEdit {
-                        width: parent.width
-                        text: root.phoneUrl
-                        color: Color.foreground
-                        font.family: Style.font.family
-                        font.pixelSize: Style.font.bodySmall
-                        readOnly: true
-                        selectByMouse: true
-                        wrapMode: TextEdit.WrapAnywhere
-                        Accessible.name: "Phone remote address"
-                    }
                 }
             }
             Label {
@@ -510,15 +363,13 @@ BarWidget {
                         }
                         Column {
                             visible: root.confirmUpdate; width: parent.width; spacing: Style.space(6)
-                            Label { width: parent.width; text: "This closes and reopens all framed previews. Unsaved page changes will be lost and phone sharing will stop. Device choices and URLs are restored; linking starts off. Finish signing in first."; font.pixelSize: Style.font.bodySmall }
+                            Label { width: parent.width; text: "This closes and reopens all framed previews. Unsaved page changes will be lost. Device choices and URLs are restored; linking starts off. Finish signing in first."; font.pixelSize: Style.font.bodySmall }
                             Row {
                                 spacing: Style.space(6)
                                 Button { text: "Close previews and update"; bordered: true; focusable: true; enabled: !root.busy; onClicked: root.workspaceAction(["--apply-update", "--confirm-close"]) }
                                 Button { text: "Cancel"; bordered: true; focusable: true; enabled: !root.busy; onClicked: root.confirmUpdate = false }
                             }
                         }
-                        Label { width: parent.width; text: "Phone: " + (root.phoneEnabled ? root.phoneViewers + " connected preview viewer(s). Keep both devices on the same network; guest Wi-Fi isolation can block access." : "Sharing is off."); font.pixelSize: Style.font.bodySmall }
-                        Button { text: "Refresh phone status"; bordered: true; focusable: true; enabled: !root.busy; onClicked: root.refreshPhone() }
                     }
                     Flow {
                         width: parent.width

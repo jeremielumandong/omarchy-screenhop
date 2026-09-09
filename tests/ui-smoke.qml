@@ -69,18 +69,7 @@ ShellRoot {
                 widget.setLinked(true);
             } else if (stage === 8) {
                 check(widget.linked && !widget.launchError, "Native link failed: " + widget.launchError);
-                check(!widget.phoneEnabled && !widget.phoneReason, "Phone status refresh failed");
-                widget.setPhone(true);
-                check(!widget.busy && !widget.phoneEnabled, "Native mode must not start sharing");
                 widget.deviceFrame = true;
-                widget.setPhone(true);
-            } else if (stage === 9) {
-                check(widget.phoneEnabled && !widget.phoneReason, "Phone remote enable failed: " + widget.phoneReason);
-                check(widget.phoneUrl === "https://screenhop.example.test:53318/test-token/", "Phone remote URL missing");
-                check(widget.phoneQrData === "", "Manual URL fallback must work without a QR image");
-                widget.setPhone(false);
-            } else if (stage === 10) {
-                check(!widget.phoneEnabled && !widget.phoneUrl && !widget.phoneReason, "Phone remote stop failed");
                 widget.customExpanded = true;
                 widget.customWidth = "0";
                 widget.launchCustom();
@@ -90,7 +79,7 @@ ShellRoot {
                 widget.customDpr = "3";
                 widget.linked = false;
                 widget.launchCustom();
-            } else if (stage === 11) {
+            } else if (stage === 9) {
                 check(!widget.launchError && widget.selectedId === "custom", "Custom framed launch failed: " + widget.launchError);
                 widget.deviceFrame = false;
                 widget.customMobile = false;

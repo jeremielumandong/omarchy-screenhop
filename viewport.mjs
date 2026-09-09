@@ -97,7 +97,7 @@ async function serve(state, headless) {
   const loadedBuild=await buildIdentity();
   const profile = join(state, 'browser');
   await mkdir(profile, {recursive:true, mode:0o700});
-  let cdp, viewerCdp, host, phoneRemote, lastUsed = Date.now();
+  let cdp, viewerCdp, host, lastUsed = Date.now();
   const viewerTargets = new Map();
   const sessions = new Map();
   const captureWindows = new Map();
@@ -344,7 +344,7 @@ async function serve(state, headless) {
       const {sessionId}=await viewerCdp.send('Target.attachToTarget',{targetId:viewerTargetId,flatten:true});
       let changed=false;
       try {
-        const geometry=await viewerCdp.send('Runtime.evaluate',{expression:`(async()=>{const device=document.getElementById('device');if(!device)throw new Error('Device frame is unavailable');const hide=document.createElement('style');hide.id='screenhop-capture-hide';hide.textContent='.tool-dock,.phone-keyboard,.toast,.recording-status{visibility:hidden!important}';document.head.append(hide);const wasBare=device.classList.contains('bare');if(wasBare){device.classList.remove('bare');fit();}await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));const r=(document.getElementById('capture-region')||document.getElementById('fit-box')).getBoundingClientRect();return {x:r.x+scrollX,y:r.y+scrollY,width:r.width,height:r.height,wasBare};})()`,awaitPromise:true,returnByValue:true},sessionId);
+        const geometry=await viewerCdp.send('Runtime.evaluate',{expression:`(async()=>{const device=document.getElementById('device');if(!device)throw new Error('Device frame is unavailable');const hide=document.createElement('style');hide.id='screenhop-capture-hide';hide.textContent='.tool-dock,.toast,.recording-status{visibility:hidden!important}';document.head.append(hide);const wasBare=device.classList.contains('bare');if(wasBare){device.classList.remove('bare');fit();}await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));const r=(document.getElementById('capture-region')||document.getElementById('fit-box')).getBoundingClientRect();return {x:r.x+scrollX,y:r.y+scrollY,width:r.width,height:r.height,wasBare};})()`,awaitPromise:true,returnByValue:true},sessionId);
         if(geometry.exceptionDetails||!geometry.result.value)throw new Error('The device frame is not ready');
         const {x,y,width,height,wasBare}=geometry.result.value;changed=wasBare;
         if(![x,y,width,height].every(Number.isFinite)||width<=0||height<=0)throw new Error('The device frame is not visible');
@@ -381,14 +381,7 @@ async function serve(state, headless) {
         try {
           const request = JSON.parse(buffer.split('\n')[0]);
           if (request.link !== undefined) linker.setEnabled(request.link === 'on');
-          if(request.phone!==undefined) {
-            if(request.phone==='off'){await phoneRemote?.close();phoneRemote=undefined;}
-            else if(request.phone==='on'){
-              if(!host||!sessions.size)throw new Error('Open a framed preview before enabling Phone remote.');
-              if(!phoneRemote){const {PhoneRemote}=await import('./phone-remote.mjs');phoneRemote=await PhoneRemote.create({host,...(process.env.SCREENHOP_TEST_PHONE_PORT==='0'?{port:0}:{})});}
-            }else throw new Error('Use --phone on or --phone off.');
-          }
-          const result = request.snapshot ? {status:'snapshot',previews:[...host?.records.values()||[]].map(record=>({targetId:record.id,device:record.device.id,url:record.url,width:record.device.width,height:record.device.height,dpr:record.device.dpr,mobile:record.device.mobile,landscape:record.device.id!=='custom' && devices.find(d=>d.id===record.device.id)?.width!==record.device.width}))} : request.capture ? await screenshot(request.capture,request.skin===true) : (request.phone!==undefined||request['phone-status']) ? {status:'phone',...(phoneRemote?phoneRemote.info():{enabled:false,url:'',urls:[],qrData:''})} : request.status ? {status:'state',build:loadedBuild,protocol:7,enabled:linked,reason:linker.reason,previewCount:sessions.size} : request.link !== undefined ? {status:'linked', enabled:linked, reason:linker.reason} : request.ping ? {status:'ok',protocol:7,build:loadedBuild} : request.close ? await closePreview() : request.inspect ? await inspectPreview(request.targetId) : await preview(request);
+          const result = request.snapshot ? {status:'snapshot',previews:[...host?.records.values()||[]].map(record=>({targetId:record.id,device:record.device.id,url:record.url,width:record.device.width,height:record.device.height,dpr:record.device.dpr,mobile:record.device.mobile,landscape:record.device.id!=='custom' && devices.find(d=>d.id===record.device.id)?.width!==record.device.width}))} : request.capture ? await screenshot(request.capture,request.skin===true) : request.status ? {status:'state',build:loadedBuild,protocol:8,enabled:linked,reason:linker.reason,previewCount:sessions.size} : request.link !== undefined ? {status:'linked', enabled:linked, reason:linker.reason} : request.ping ? {status:'ok',protocol:8,build:loadedBuild} : request.close ? await closePreview() : request.inspect ? await inspectPreview(request.targetId) : await preview(request);
           client.end(JSON.stringify(result) + '\n');
         } catch (error) { client.end(JSON.stringify({status:'error', error:error.message}) + '\n'); }
       });
@@ -413,7 +406,7 @@ async function serve(state, headless) {
   await chmod(socket, 0o600);
   const idle = setInterval(() => {
     if ((!cdp || cdp.ws.readyState !== WebSocket.OPEN) && Date.now() - lastUsed > 30000) {
-      clearInterval(idle); for(const timer of frameTimers)clearTimeout(timer); phoneRemote?.close(); host?.shutdown(); server.close(); unlink(socket).catch(() => {});
+      clearInterval(idle); for(const timer of frameTimers)clearTimeout(timer); host?.shutdown(); server.close(); unlink(socket).catch(() => {});
     }
   }, 5000);
 }
@@ -432,28 +425,23 @@ async function main() {
   const args = process.argv.slice(2); const opts = {};
   for (let i=0; i<args.length; i++) {
     const key = args[i];
-    if (['--mobile','--landscape','--linked','--headless','--serve','--close','--list','--status','--phone-status'].includes(key)) opts[key.slice(2)] = true;
-    else if (['--width','--height','--dpr','--device','--url','--state','--link','--phone'].includes(key) && args[i+1]) opts[key.slice(2)] = args[++i];
+    if (['--mobile','--landscape','--linked','--headless','--serve','--close','--list','--status'].includes(key)) opts[key.slice(2)] = true;
+    else if (['--width','--height','--dpr','--device','--url','--state','--link'].includes(key) && args[i+1]) opts[key.slice(2)] = args[++i];
     else throw new Error('Usage: node viewport.mjs --device ID --url URL [--landscape] [--list]');
   }
-  if(opts.phone!==undefined&&!['on','off'].includes(opts.phone))throw new Error('Use --phone on or --phone off.');
   if (opts.list) { console.log(JSON.stringify(devices)); return; }
   if (opts.link !== undefined && !['on','off'].includes(opts.link)) throw new Error('Use --link on or --link off.');
-  if (!opts.serve && !opts.close && !opts.status && !opts['phone-status'] && opts.phone===undefined && opts.link === undefined) selection(opts);
+  if (!opts.serve && !opts.close && !opts.status && opts.link === undefined) selection(opts);
   const state = resolve(opts.state || join(process.env.XDG_CACHE_HOME || join(homedir(), '.cache'), 'screenhop-framed'));
   await mkdir(state, {recursive:true, mode:0o700});
   if (opts.serve) { await serve(state, opts.headless); return; }
   const socket = join(state, 'controller.sock'); let response;
   try {
     const running=await rpc(socket,{ping:true});
-    if(running.protocol!==7&&!opts.close)throw new Error('ScreenHop was updated. Save your work, close all ScreenHop previews, wait 35 seconds, then reopen them to activate the update.');
+    if(running.protocol!==8&&!opts.close)throw new Error('ScreenHop was updated. Save your work, close all ScreenHop previews, wait 35 seconds, then reopen them to activate the update.');
     response = await rpc(socket, opts);
   } catch (error) {
     if (!['ENOENT','ECONNREFUSED'].includes(error.code)) throw error;
-    if(opts.phone!==undefined||opts['phone-status']) {
-      if(opts.phone==='on')throw new Error('Open a framed preview before enabling Phone remote.');
-      console.log(JSON.stringify({status:'phone',enabled:false,url:'',urls:[],qrData:''}));return;
-    }
     if (opts.close || opts.status || opts.link !== undefined) { console.log(JSON.stringify({status:opts.close ? 'closed' : opts.status ? 'state' : 'linked', enabled:opts.link === 'on',reason:'',previewCount:0})); return; }
     const log = openSync(join(state, 'controller.log'), 'a', 0o600);
     const child = spawn(process.execPath, [fileURLToPath(import.meta.url), '--serve', '--state', state, ...(opts.headless ? ['--headless'] : [])], {detached:true, stdio:['ignore',log,log]});

@@ -1,4 +1,3 @@
-import {tls,fetch} from './helpers/phone-tls.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {mkdtemp,readFile} from 'node:fs/promises';
@@ -7,7 +6,6 @@ import {createServer} from 'node:http';
 import {promisify} from 'node:util';
 import {CDP} from '../viewport.mjs';
 import {PreviewHost} from '../preview-host.mjs';
-import {PhoneRemote} from '../phone-remote.mjs';
 const exec=promisify(execFile),sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const post=(url,payload,headers={})=>fetch(url+'/action',{method:'POST',headers:{'Content-Type':'application/json',...headers},body:JSON.stringify(payload)});
 
@@ -15,18 +13,15 @@ test('screenshot routes require token/origin and explicit boolean skin before ca
   const calls=[],capture={mimeType:'image/png',data:'test',filename:'test.png'};
   const host=await PreviewHost.create({action:async(id,data)=>{calls.push(data);return capture;},input:async()=>{}});
   const desktop=host.register('abcdef','sid',{name:'Test',width:390,height:844},false);
-  const phone=await PhoneRemote.create({tls,host,port:0});
-  t.after(async()=>{await phone.close();host.shutdown();});
-  const remote=phone.info().url+'view/abcdef';
-  for(const url of [desktop,remote]){
+  t.after(()=>host.shutdown());
+  for(const url of [desktop]){
     assert.deepEqual(await(await post(url,{action:'screenshot',skin:true})).json(),capture);
     assert.equal((await post(url,{action:'screenshot',skin:'true'})).status,400);
     assert.ok((await post(url,{action:'screenshot',skin:false},{Origin:'https://invalid.test'})).status>=400);
     assert.equal((await fetch(url+'/capture-ui.js')).status,200);
   }
   assert.equal((await post(desktop.replace(host.token,'wrong'),{action:'screenshot',skin:true})).status,404);
-  assert.equal((await fetch(remote.replace(phone.token,'wrong')+'/capture-ui.js')).status,404);
-  assert.equal(calls.length,2);
+  assert.equal(calls.length,1);
 });
 
 test('page PNG uses device DPR and skin PNG captures frame only, restoring Frame toggle', {timeout:60000},async()=>{

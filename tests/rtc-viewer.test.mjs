@@ -1,4 +1,3 @@
-import {browserEnvironment,fetch} from './helpers/phone-tls.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {mkdtemp,readFile,writeFile} from 'node:fs/promises';
@@ -9,7 +8,7 @@ import {CDP,rpc} from '../viewport.mjs';
 const exec=promisify(execFile),helper=new URL('../viewport.mjs',import.meta.url).pathname;
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 async function eventually(fn,description) {for(let i=0;i<60;i++){if(await fn())return;await sleep(100)}throw new Error('Timed out: '+description)}
-test('WebRTC exact device geometry, interactive input, navigation recovery and phone pairing', {timeout:90000}, async()=>{
+test('WebRTC exact device geometry, interactive input, navigation recovery', {timeout:90000}, async()=>{
  const state=await mkdtemp('/tmp/screenhop-framed-test-'); const requests=[];
  const http=createServer((req,res)=>{
   requests.push(req.url);
@@ -19,7 +18,7 @@ test('WebRTC exact device geometry, interactive input, navigation recovery and p
  });
  await new Promise(r=>http.listen(0,'127.0.0.1',r));
  const url='http://127.0.0.1:'+http.address().port;
- const run=async(...args)=>JSON.parse((await exec(process.execPath,[helper,'--state',state,...args],{timeout:40000,env:browserEnvironment()})).stdout);
+ const run=async(...args)=>JSON.parse((await exec(process.execPath,[helper,'--state',state,...args],{timeout:40000})).stdout);
  let source,viewer;
  try{
   const first=await run(...(process.env.SCREENHOP_TEST_HEADFUL?[]:['--headless']),'--device','iphone-13','--url',url);
@@ -64,32 +63,6 @@ test('WebRTC exact device geometry, interactive input, navigation recovery and p
   await evalView('document.querySelector("#frame").click()');
   const screenshot=await viewer.send('Page.captureScreenshot',{format:'png'},view);
   await writeFile('/tmp/screenhop-1.0.0-preview.png',Buffer.from(screenshot.data,'base64'));
-  const paired=await run('--phone','on');
-  assert.equal(paired.enabled,true);
-  const remoteBase=new URL(paired.url);remoteBase.hostname='127.0.0.1';
-  const remoteView=new URL('view/'+first.targetId,remoteBase);
-  assert.equal((await run('--phone-status')).enabled,true);
-  const remoteHTML=await (await fetch(remoteView)).text();
-  assert.match(remoteHTML,/"phone":true/);
-  const {targetId:phoneTarget}=await viewer.send('Target.createTarget',{url:remoteView.href});
-  const {sessionId:phoneSession}=await viewer.send('Target.attachToTarget',{targetId:phoneTarget,flatten:true});
-  const evalPhone=async expression=>(await viewer.send('Runtime.evaluate',{expression,returnByValue:true},phoneSession)).result.value;
-  try { await eventually(()=>evalPhone('document.querySelector("#rtc-video")?.videoWidth === 390 && document.querySelector("#rtc-video")?.videoHeight === 844'),'phone receives WebRTC video'); } catch(error){ console.log(await evalPhone('({mode:rtcMode,state:rtcPeer?.connectionState,ice:rtcPeer?.iceConnectionState,width:rtcVideo.videoWidth,height:rtcVideo.videoHeight,toast:document.querySelector("#toast").textContent})'));throw error; }
-  const remotePost=async(route,data)=>{
-   const response=await fetch(remoteView+'/'+route,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
-   assert.equal(response.status,200);
-  };
-  await remotePost('action',{action:'link',enabled:true});
-  await remotePost('input',{kind:'mouse',type:'mousePressed',x:button.x,y:button.y,button:'left',clickCount:1});
-  await remotePost('input',{kind:'mouse',type:'mouseReleased',x:button.x,y:button.y,button:'left',clickCount:1});
-  await eventually(()=>evalSource('document.querySelector("#counter").textContent === "2"'),'phone click reaches source');
-  const {sessionId:otherPage}=await source.send('Target.attachToTarget',{targetId:second.targetId,flatten:true});
-  await eventually(async()=>(await source.send('Runtime.evaluate',{expression:'document.querySelector("#counter").textContent',returnByValue:true},otherPage)).result.value==='1','phone click reaches linked preview');
-  assert.equal((await run('--phone','off')).enabled,false);
-  await assert.rejects(fetch(remoteView));
-  await eventually(()=>evalPhone('document.querySelector("#status").dataset.state !== "live"'),'stop sharing revokes phone WebRTC');
-  await viewer.send('Target.closeTarget',{targetId:phoneTarget});
-  console.log('Phone integration: pairing, status, real renderer input, linked follower and revocation passed.');
   const previousPeer=await evalView('rtcPeerId');
   await source.send('Page.navigate',{url:url+'/navigated'},page);
   await eventually(()=>evalView('rtcMode === "webrtc" && rtcPeerId !== '+JSON.stringify(previousPeer)+' && rtcVideo.videoWidth === 390 && rtcVideo.videoHeight === 844'),'WebRTC reconnect after navigation');

@@ -22,7 +22,6 @@ Open ScreenHop from the bar, enter your site or localhost URL, and choose from *
 
 **One workflow, several views.** Enable linked browsing to mirror supported clicks, ordinary typing, scrolling and navigation across matching controls. Phone and tablet previews send touch input; desktop previews support mouse hover. Recognized sign-in and verification flows pause linking.
 
-**Your phone can be the controller.** Pair through a QR code on trusted local Wi-Fi, select a preview, and interact from your phone's browser. Link the previews to control the group. No companion app or cloud account is required.
 
 **Capture what matters.** Save PNG screenshots and silent recordings, with a device frame or just the webpage. Export screenshots from every open preview, and save your device-and-URL workspace for the next session.
 
@@ -32,18 +31,18 @@ ScreenHop is built for responsive development, layout reviews and documenting bu
 
 ### Requirements and practical limits
 
-Requires an Omarchy shell with third-party plugins, Quickshell, Hyprland, Node.js 22.4+ with built-in WebSocket, and Chromium or a configured compatible browser. No npm dependencies or browser extension. `qrencode` is optional for QR images; a pairing URL is available without it.
+Requires an Omarchy shell with third-party plugins, Quickshell, Hyprland, Node.js 22.4+ with built-in WebSocket, and Chromium or a configured compatible browser. No npm dependencies or browser extension.
 
 These are Chromium previews, not real devices, Safari or mobile OS emulators. Presets derived from physical specifications are marked approximate. Linking skips unsupported or ambiguous controls, and authentication detection is not a guarantee for every provider. Native browser dialogs and file workflows are available through direct browser mode. Recordings are silent and limited to three minutes or 128 MB.
 
-Phone sharing is opt-in and requires a configured server certificate already trusted by the phone. It uses HTTPS/WSS (TLS 1.2+) on TCP53318, rejects missing or invalid TLS configuration before listening, and may request a scoped UFW rule only after HTTPS starts. Each enable creates a fresh 256-bit pairing credential; stopping sharing revokes it. There is no plaintext transport fallback. Installation, removal, retained browser profiles and firewall rules are documented in README.md.
+This first release is desktop-only: phone remote control, QR pairing, LAN listeners, certificate setup and firewall automation are excluded. Preview control and browser debugging stay on loopback. Installation, removal and retained browser profiles are documented in README.md.
 
 MIT covers ScreenHop code and original CSS frames. Adapted Playwright device data includes its Apache-2.0 license and notice. The public package excludes standalone Samsung emulator asset files. The author-supplied screenshots show a local Galaxy skin setup, as identified in the README.
 
 ## Preview images
 
-- Main preview: `preview.png` — ScreenHop's device picker alongside responsive previews.
-- Additional screenshot: `docs/images/device-previews.png` — foldable and phone views side by side.
+- Main preview: `preview.png` — foldable and phone previews side by side.
+- Source screenshot: `docs/images/device-previews.png` (the same device-preview image).
 
 ## Submission checklist
 
@@ -55,4 +54,6 @@ Confirm these in the marketplace form when submitting:
 - The plugin does not overwrite user configuration without explicit consent.
 - Marketplace approval is a listing review, not a security review.
 
-Submit: https://github.com/omacom/omarchy-plugin-marketplace/issues/new?template=submit-plugin.yml
+Existing submission: https://github.com/omacom/omarchy-plugin-marketplace/issues/5799
+
+When publication resumes, update this existing issue with the final full commit and request fresh validation and security-baseline reports.

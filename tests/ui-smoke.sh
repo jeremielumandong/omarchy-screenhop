@@ -14,13 +14,7 @@ import assert from 'node:assert/strict';
 import {existsSync, writeFileSync} from 'node:fs';
 const args = process.argv.slice(2);
 const native = process.argv[1].endsWith("native-preview.mjs");
-if (args[0] === '--phone-status' || args[0] === '--phone') {
-    assert.equal(native, false);
-    if (args[0] === '--phone') assert.ok(['on', 'off'].includes(args[1]));
-    else assert.deepEqual(args, ['--phone-status']);
-    const enabled = args[1] === 'on';
-    console.log(JSON.stringify({status: 'phone', enabled, url: enabled ? 'https://screenhop.example.test:53318/test-token/' : '', urls: [], qrData: ''}));
-} else if (args[0] === '--status') {
+if (args[0] === '--status') {
     assert.deepEqual(args, ['--status']);
     console.log(JSON.stringify({status: 'state', enabled: false, previewCount: 0}));
 } else if (args[0] === '--link') {

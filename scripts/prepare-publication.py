@@ -6,7 +6,7 @@ if len(sys.argv)!=2: raise SystemExit('Usage: python3 scripts/prepare-publicatio
 target=pathlib.Path(sys.argv[1]).resolve()
 if target.exists(): raise SystemExit('Output must be a new directory')
 target.mkdir(parents=True)
-root_files=['Widget.qml','manifest.json','viewport.mjs','native-preview.mjs','preview-host.mjs','phone-remote.mjs','phone-firewall.mjs','viewer.html','linked-previews.mjs','sync-policy.mjs','sync.js','capture-rtc.js','capture-ui.js','build.mjs','workspaces.mjs','skin-assets.mjs','event-sockets.mjs','README.md','PLAN.md','LICENSE','THIRD_PARTY_NOTICES.md','preview.png','CHANGELOG.md','.gitignore']
+root_files=['Widget.qml','manifest.json','viewport.mjs','native-preview.mjs','preview-host.mjs','viewer.html','linked-previews.mjs','sync-policy.mjs','sync.js','capture-rtc.js','capture-ui.js','build.mjs','workspaces.mjs','skin-assets.mjs','event-sockets.mjs','README.md','PLAN.md','LICENSE','THIRD_PARTY_NOTICES.md','preview.png','CHANGELOG.md','VALIDATION.md','.gitignore']
 for name in root_files:shutil.copy2(source/name,target/name)
 for folder in ['scripts','tests','third_party']:
  for p in (source/folder).rglob('*'):
@@ -22,5 +22,4 @@ for name in ['DEVICE_SOURCES.md','PUBLICATION.md','MARKETPLACE_SUBMISSION.md']:
 devices=json.loads((source/'devices.json').read_text())
 for d in devices:d.pop('skinAsset',None)
 (target/'devices.json').write_text(json.dumps(devices,indent=2)+'\n')
-(target/'VALIDATION.md').write_text('# Publication validation\n\nSee docs/PUBLICATION.md for the checks and remaining publication steps.\n')
 print(target)

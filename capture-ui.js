@@ -32,7 +32,7 @@
     document.body.append(anchor); anchor.click(); anchor.remove();
     setTimeout(() => { URL.revokeObjectURL(url); downloadURLs.delete(url); },60000);
   }
-  function hideDrawer() { document.querySelector('.tool-dock').classList.remove('open'); document.getElementById('tools-toggle').setAttribute('aria-expanded','false'); const keyboard = document.getElementById('phone-keyboard-panel'); if (keyboard) keyboard.hidden = true; document.getElementById('phone-keyboard-toggle')?.setAttribute('aria-expanded','false'); document.getElementById('toast').hidden = true; }
+  function hideDrawer() { document.querySelector('.tool-dock').classList.remove('open'); document.getElementById('tools-toggle').setAttribute('aria-expanded','false'); document.getElementById('toast').hidden = true; }
   function currentPicture() {
     const live = document.getElementById('rtc-video'), image = document.getElementById('display');
     if (document.getElementById('screen').classList.contains('rtc-live') && live.readyState >= 2) return live;

@@ -19,3 +19,7 @@ Device windows using the same profile share cookies and browser storage. Separat
 Session expiry, logout, MFA, and site security requirements still apply. ScreenHop does not bypass authentication or promise permanent login.
 
 A later optional feature could import supported browser storage state for test environments. Imported state contains authentication material and belongs inside the selected local profile; ScreenHop should not collect or store raw passwords or other login credentials.
+
+## Deferred phone remote
+
+Phone remote control is excluded from the first public release. A future design must establish authenticated encrypted transport with a usable pairing experience, such as a native companion app with QR-bound identity verification or an explicitly configured secure transport. Do not restore the old plaintext LAN bearer endpoint.

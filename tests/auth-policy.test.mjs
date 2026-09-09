@@ -34,7 +34,7 @@ test('allows same-origin ordinary navigation and fragments',()=> {
 });
 
 function harness({url='https://app.test/products',fields=false}={}) {
-  const events=[]; const listeners={}; let observer;
+  const events=[]; const listeners={}; const observers=[];
   class Element {
     constructor({tag='button',text='',password=false,submit=false,href}={}) {Object.assign(this,{tag,textContent:text,password,submit,href,form:submit?{}:null});}
     matches(selector) {
@@ -49,9 +49,9 @@ function harness({url='https://app.test/products',fields=false}={}) {
     hasAttribute() {return false;}
   }
   const document={querySelector:()=>fields?{}:null,querySelectorAll:()=>[{}],addEventListener:(name,cb)=>listeners[name]=cb};
-  const context={Element,document,location:new URL(url),screenhopEvent:data=>events.push(JSON.parse(data)),MutationObserver:class {constructor(cb){observer=cb;}observe(){}},addEventListener(){},URL,URLSearchParams,Date,setTimeout,clearTimeout};
+  const context={Element,document,location:new URL(url),screenhopEvent:data=>events.push(JSON.parse(data)),MutationObserver:class {constructor(cb){observers.push(cb);}observe(){}},addEventListener(){},URL,URLSearchParams,Date,setTimeout,clearTimeout};
   vm.runInNewContext(readFileSync(new URL('../sync.js',import.meta.url),'utf8'),context);
-  return {events,Element,click:target=>listeners.click({target,isTrusted:true,button:0}),showAuth:()=>{fields=true;observer();}};
+  return {events,Element,click:target=>listeners.click({target,isTrusted:true,button:0}),showAuth:()=>{fields=true;for(const observer of observers)observer([]);}};
 }
 
 test('auth detection on install and dynamic forms emits only once',()=> {

@@ -1,17 +1,21 @@
-# Publication validation
+# ScreenHop 1.0.0 validation
 
-## Phone transport security fix — 2026-09-08
+## Desktop-only release
 
-Phone sharing now requires a configured certificate already trusted by the phone, with TLS 1.2+ for pairing, input/action requests, SSE and WebSockets. The server validates certificate dates, Subject Alternative Name and private-key match before listening. Each sharing session receives a new random 256-bit credential; disabling sharing revokes it and disconnects phones. No plaintext listener or fallback exists. The README documents authenticated certificate provisioning and renewal. Desktop previews remain available without phone TLS configuration.
+Phone remote control is removed from the release tree, CLI, picker, viewer input bridge, build identity and export manifest. Its TLS test helper and standalone remote/firewall tests are removed. The installer backs up an older installation and removes its retired phone-sharing modules. Desktop preview control binds to `127.0.0.1`; the controller uses a private Unix socket. Controller protocol 8 prevents new commands from silently using an older running controller.
 
-Passed:
+README.md, CHANGELOG.md, PLAN.md and both publication/listing guides describe the first-release scope. The main screenshot now uses the existing side-by-side device image, so it does not advertise the removed phone-sharing button.
 
-- 21 route/security regressions: `node --test tests/phone-remote.test.mjs tests/event-sockets.test.mjs tests/rtc-signaling.test.mjs tests/phone-firewall.test.mjs`. Covers HTTP/WS replay denial, untrusted TLS rejection, TLS 1.2/1.3 acceptance and legacy rejection, invalid/missing configuration, expired/mismatched identities, token rotation/revocation, Host/Origin enforcement and scoped firewall behavior.
-- Five Chromium integration cases: `node --test --test-concurrency=1 tests/viewer.test.mjs tests/rtc-viewer.test.mjs tests/multi-preview.test.mjs tests/screenshot.test.mjs`. Includes seven desktop plus seven HTTPS/WSS phone viewers with live WebRTC video and real input, linked controls, authentication isolation, screenshots and cleanup.
-- `bash tests/install-smoke.sh`: repeated installation, backup preservation and one discoverable plugin.
-- `bash tests/ui-smoke.sh`: picker catalog, search, frame/native launch, linking, authentication pause and HTTPS pairing display.
-- `omarchy plugin validate .`: plugin manifest/compatibility validation.
+## Passed checks
 
-TLS tests generate an ephemeral identity, validate it with an explicit test CA, and separately verify that an untrusted client rejects it. Browser integration pins only that ephemeral key in a test wrapper. Production code has no certificate-verification bypass. No keys, certificates or pairing credentials are committed.
+- 43 tests across auth-policy, event-sockets, multi-preview, rtc-signaling, rtc-viewer, screenshot, touch-input, touch-viewer, viewer and workspaces. Covers seven simultaneous desktop WebRTC previews, real input, signaling authentication and cleanup, touch gestures, screenshots, viewport geometry, linked previews and sign-in isolation.
+- `bash tests/install-smoke.sh`: repeated installs preserve backups, remove obsolete remote/firewall modules and expose one plugin.
+- `bash tests/ui-smoke.sh`: simplified picker, catalog/search, frame/native launches, custom dimensions, linking and authentication pause.
+- `omarchy plugin validate .`: manifest and compatibility validation.
+- Exported package passes plugin validation and installer smoke; no phone-sharing modules or TLS test helpers are present, and validation notes are preserved.
+- Removed `--phone` and `--phone-status` CLI options reject before starting a controller.
+- `node --check viewport.mjs`, `node --check capture-ui.js` and `git diff --check`.
 
-These checks are regression evidence, not a security audit. Marketplace validation and the automated security baseline must be rerun for the final full commit; maintainer review remains required.
+The auth-policy test harness was corrected to notify both registered mutation observers with a records array, matching browser behavior; the production authentication policy was unchanged.
+
+Marketplace revalidation is paused for local review. After publication resumes, the final full default-branch commit must match both the new validation report and security baseline. These local regressions are not a marketplace attestation or security audit.
