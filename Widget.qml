@@ -8,7 +8,7 @@ import qs.Ui
 BarWidget {
     id: root
     moduleName: "arkane.screenhop"
-    Component.onCompleted: console.info("ScreenHop 1.0.4 widget loaded:", pluginDirectory, "initial URL:", website)
+    Component.onCompleted: console.info("ScreenHop 1.0.5 widget loaded:", pluginDirectory, "initial URL:", website)
     readonly property bool showBarText: setting("showBarText", true)
     function setBarText(value) {
         var entry = {id: root.moduleName};
@@ -17,61 +17,6 @@ BarWidget {
         root.settings = entry;
         if (root.bar && root.bar.shell && typeof root.bar.shell.updateEntryInline === "function")
             root.bar.shell.updateEntryInline(root.moduleName, entry);
-    }
-    property string availableCommit: ""
-    property string checkedInstalledCommit: ""
-    property string updateMessage: ""
-    property bool confirmDownload: false
-    property bool pickerReloadNeeded: false
-    property bool updateInProgress: false
-    Timer { interval: 1000; repeat: true; running: root.updateInProgress; onTriggered: { if (!updateProgress.running) updateProgress.running = true; } }
-    Process {
-        id: updateProgress
-        command: ["node", root.pluginDirectory + "plugin-update.mjs", "--progress"]
-        running: true
-        stdout: SplitParser { onRead: data => {
-            try {
-                var result = JSON.parse(data);
-                if (result.status === "idle") return;
-                root.updateInProgress = result.status === "installing";
-                root.updateMessage = result.message || "";
-                if (result.status === "installed") { root.pickerReloadNeeded = true; root.availableCommit = ""; }
-                if (result.status === "error") root.availableCommit = "";
-            } catch (error) { /* Keep the last progress message. */ }
-        } }
-    }
-    function dismissUpdate() { if (!busy) updateAcknowledger.running = true; }
-    Process {
-        id: updateAcknowledger
-        command: ["node", root.pluginDirectory + "plugin-update.mjs", "--acknowledge"]
-        onExited: (exitCode, exitStatus) => { if (exitCode === 0) { root.pickerReloadNeeded = false; root.updateMessage = ""; root.close(); } else root.updateMessage = "Could not clear update status. Close and reopen ScreenHop, then retry."; }
-    }
-    function repositoryUpdate(install) {
-        if (busy) return;
-        updateMessage = install ? "Installing update…" : "Checking for updates…";
-        repositoryUpdater.command = ["node", pluginDirectory + "plugin-update.mjs"].concat(install ? ["--install", checkedInstalledCommit, availableCommit || checkedInstalledCommit] : ["--check"]);
-        if (!install) { checkedInstalledCommit = ""; availableCommit = ""; confirmDownload = false; }
-        repositoryUpdater.running = true;
-    }
-    Process {
-        id: repositoryUpdater
-        stdout: SplitParser { onRead: data => {
-            try {
-                var result = JSON.parse(data);
-                root.updateMessage = result.message || "";
-                if (result.status === "installing") root.updateInProgress = true;
-                if (result.status === "checked") {
-                    root.checkedInstalledCommit = result.installed;
-                    root.availableCommit = result.available ? result.commit : "";
-                }
-                if (result.status === "installed") { root.pickerReloadNeeded = true; root.availableCommit = ""; }
-                if (result.status === "error") root.availableCommit = "";
-            } catch (error) { /* Ignore non-JSON diagnostics. */ }
-        } }
-        onExited: (exitCode, exitStatus) => {
-            root.confirmDownload = false;
-            if (exitCode !== 0 && (root.updateMessage === "Checking for updates…" || root.updateMessage === "Installing update…")) root.updateMessage = "Update failed. Check your connection and installation, then retry.";
-        }
     }
     property bool toolsExpanded: false
     property var workspaceNames: []
@@ -103,7 +48,7 @@ BarWidget {
     property string selectedId: ""
     property string status: "Choose a device to open a browser preview."
     property string launchError: ""
-    readonly property bool busy: launcher.running || linkUpdater.running || workspaceRunner.running || repositoryUpdater.running || updateInProgress || updateAcknowledger.running
+    readonly property bool busy: launcher.running || linkUpdater.running || workspaceRunner.running
     readonly property string pluginDirectory: decodeURIComponent(Qt.resolvedUrl(".").toString().replace(/^file:\/\//, "")).replace(/\/?$/, "/")
     readonly property var groups: {
         var result = [];
@@ -332,23 +277,6 @@ BarWidget {
                 Button { id: dismiss; text: "Close"; focusable: true; onClicked: root.close() }
             }
             Label { width: parent.width; text: "YOUR WEBSITE, ON EVERY SCREEN"; font.pixelSize: Style.font.bodySmall; opacity: 0.65 }
-            Flow {
-                width: parent.width; spacing: Style.space(6)
-                Button { text: "Check for updates"; bordered: true; focusable: true; enabled: !root.busy; onClicked: root.repositoryUpdate(false) }
-                Button { text: "Install update…"; visible: root.availableCommit !== ""; bordered: true; focusable: true; enabled: !root.busy; onClicked: root.confirmDownload = true }
-                Button { text: "Build native previews"; visible: root.checkedInstalledCommit !== "" && root.availableCommit === ""; bordered: true; focusable: true; enabled: !root.busy; onClicked: root.confirmDownload = true }
-                Button { text: "Done"; visible: root.pickerReloadNeeded; bordered: true; focusable: true; enabled: !root.busy; onClicked: root.dismissUpdate() }
-            }
-            Label { width: parent.width; visible: root.updateMessage !== ""; text: root.updateMessage; font.pixelSize: Style.font.bodySmall }
-            Column {
-                visible: root.confirmDownload; width: parent.width; spacing: Style.space(6)
-                Label { width: parent.width; text: root.availableCommit !== "" ? "Install the checked update and build native previews? Existing previews stay open. Reopen them after saving your work. Build dependencies must already be installed." : "Build native previews from the current source? Build dependencies must already be installed. Existing previews stay open."; font.pixelSize: Style.font.bodySmall }
-                Row {
-                    spacing: Style.space(6)
-                    Button { text: root.availableCommit !== "" ? "Install update" : "Build native previews"; bordered: true; focusable: true; enabled: !root.busy; onClicked: root.repositoryUpdate(true) }
-                    Button { text: "Cancel"; bordered: true; focusable: true; enabled: !root.busy; onClicked: root.confirmDownload = false }
-                }
-            }
             TextField {
                 width: parent.width
                 text: root.website
@@ -496,7 +424,7 @@ BarWidget {
                             Button { text: root.batchSkin ? "✓ Include skin" : "Page only"; selected: root.batchSkin; bordered: true; focusable: true; enabled: !root.busy; onClicked: root.batchSkin = !root.batchSkin }
                             Button { text: "Screenshot all"; bordered: true; focusable: true; enabled: !root.busy && root.deviceFrame; onClicked: root.workspaceAction(root.batchSkin ? ["--batch"] : ["--batch", "--page-only"]) }
                         }
-                        Label { width: parent.width; text: "ScreenHop 1.0.4 · " + (root.buildStatus || "Check the running build before applying an update."); font.pixelSize: Style.font.bodySmall }
+                        Label { width: parent.width; text: "ScreenHop 1.0.5 · " + (root.buildStatus || "Check whether running previews use the installed build."); font.pixelSize: Style.font.bodySmall }
                         Row {
                             spacing: Style.space(6)
                             Button { text: "Check build"; bordered: true; focusable: true; enabled: !root.busy; onClicked: root.workspaceAction(["--status"]) }

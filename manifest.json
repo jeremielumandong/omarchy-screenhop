@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "arkane.screenhop",
   "name": "ScreenHop",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "author": "arkane",
   "description": "Preview your website across multiple devices, side by side. Responsive testing for developers on Omarchy.",
   "kinds": [

@@ -6,7 +6,7 @@ Built for developers testing responsive websites. See how your site adapts acros
 
 Link supported interactions across previews and save screenshots or short recordings to share what you find. No browser extension, npm setup, or cloud account required.
 
-**Version 1.0.4 · 103 presets · Custom viewports · MIT-licensed code**
+**Version 1.0.5 · 103 presets · Custom viewports · MIT-licensed code**
 
 - **Spot layout problems sooner.** Compare multiple device sizes in centered, borderless preview windows.
 - **Repeat less, compare more.** Optionally link matching clicks, text input, scrolling and supported navigation across previews.
@@ -58,7 +58,7 @@ Clicks match visible unique semantic labels and text, with generated IDs as a la
 
 ## First-release scope
 
-ScreenHop 1.0.4 runs its device previews on your desktop. Phone remote control, QR pairing, LAN sharing, certificate setup and firewall automation are not included. Phone and tablet presets still provide responsive layouts and touch-input emulation inside desktop preview windows.
+ScreenHop 1.0.5 runs its device previews on your desktop. Phone remote control, QR pairing, LAN sharing, certificate setup and firewall automation are not included. Phone and tablet presets still provide responsive layouts and touch-input emulation inside desktop preview windows.
 
 The preview HTTP/WebSocket control listener and browser debugging endpoints are loopback-only. Screenshots, recordings, linked interactions and saved workspaces remain available locally. Websites loaded in previews still use their normal network connections.
 
@@ -79,7 +79,7 @@ omarchy plugin add https://github.com/jeremielumandong/omarchy-screenhop
 
 For a downloaded source package, run `bash scripts/install.sh` from its directory. The installer validates the plugin and checks dependencies before installing. It does not install system packages automatically.
 
-The widget appears at the right of the bar. The installer keeps backups outside Omarchy’s plugin discovery directory and migrates older timestamped backup folders so they cannot override the current plugin. After updating, use **Workspace and tools → Check build → Apply update** in the picker. Confirming closes and restores framed previews after the previous controller exits. Unsaved page changes are lost and linking starts off. Authentication/callback URLs cannot be restored. Browser profile cookies are retained. The installer restarts the shell when the picker code changes, preventing cached URL defaults and controls.
+The widget appears at the right of the bar. The installer keeps backups outside Omarchy’s plugin discovery directory, migrates older timestamped backup folders so they cannot override the current plugin, and removes the retired self-updater from earlier installations. After updating, use **Workspace and tools → Check build → Restart previews** in the picker. Confirming closes and restores framed previews after the previous controller exits. Unsaved page changes are lost and linking starts off. Authentication/callback URLs cannot be restored. Browser profile cookies are retained. The installer restarts the shell when the picker code changes, preventing cached URL defaults and controls.
 
 ### Removal
 
@@ -144,7 +144,7 @@ Expand **Workspace and tools** in the device picker. **Save open previews** stor
 
 **Screenshot all** saves sequential PNG captures to a new directory under `~/Pictures/ScreenHop`. Choose **Include skin** or **Page only**. These are sequential captures, not a synchronized instant across devices. The completion message gives the output directory.
 
-**Check build** compares the installed renderer build with the running controller. **Apply update** requires explicit confirmation before closing previews.
+**Check build** compares the installed renderer build with the running controller. **Restart previews** requires explicit confirmation before closing previews and only relaunches them from code already installed on disk; it does not fetch or install anything.
 
 Additional checks:
 
@@ -170,7 +170,7 @@ ScreenHop code and its original preview artwork are MIT licensed. Adapted Playwr
 
 Preview events and video signaling responses use authenticated WebSockets, avoiding the HTTP connection-pool exhaustion that previously stalled the sixth preview. WebRTC still carries video; validated HTTP endpoints still carry input and control requests. Seven simultaneous desktop previews are covered by an isolated small-viewport regression; actual device count and performance depend on website complexity and hardware.
 
-For a Git-managed install, use `omarchy plugin update arkane.screenhop` to fetch updates, then **Workspace and tools → Check build → Apply update** to reopen existing previews with the new controller. Finish unsaved work before applying. Copied local installs must rerun their installer.
+For a Git-managed install, use `omarchy plugin update arkane.screenhop` outside ScreenHop, then **Workspace and tools → Check build → Restart previews** to reopen existing previews with the installed controller. Finish unsaved work before restarting. Copied local installs must rerun their installer.
 
 ## Experimental native previews (1.0.1)
 
@@ -190,6 +190,12 @@ Native profiles are retained under `$XDG_STATE_HOME/screenhop/native` (normally 
 
 Open ScreenHop and switch off **Bar text** beside **Close** to show only its icon in the desktop bar. The tooltip still identifies ScreenHop. The choice is saved in the plugin’s inline `showBarText` setting and survives shell restarts. Switch **Bar text** on to restore the label.
 
-### Update from the picker
+### Updates
 
-Click **Check for updates** in the main ScreenHop picker (available in both rendering modes), then **Install update…** and confirm. The updater installs the exact checked commit, refuses local edits or diverged branches, and builds the native host, including on its first installation. If the source is already current, **Build native previews** builds or retries it without requiring another release. The documented compiler and Qt dependencies must be installed separately; the updater does not install system packages. A build failure leaves the downloaded source in place and reports how to retry; WebRTC remains available. Copied installations must be reinstalled through Omarchy to use Git updates. Click **Done** after success to dismiss the notice and close ScreenHop. This does not restart the shell or reload its plugins. If an older picker remains cached, restart the shell from a separate terminal after saving your work; ScreenHop does not do this automatically. Existing previews remain open until you choose to close and reopen them. **Check build → Restart previews…** separately restarts WebRTC previews against the installed code; it does not download updates.
+ScreenHop does not check for, fetch, or install repository updates, and it does not execute build scripts from newly fetched code. Updates are handled outside the plugin by Omarchy:
+
+```sh
+omarchy plugin update arkane.screenhop --yes
+```
+
+Wait for the Marketplace to approve a release before updating to it. Close experimental native windows before updating. If the approved release requires the optional native host to be rebuilt, run `bash ~/.config/omarchy/plugins/arkane.screenhop/scripts/build-native.sh` only after the reviewed release is installed. Existing framed previews remain open until **Check build → Restart previews…** is confirmed; that action only restarts previews from the installed source.

@@ -1,3 +1,13 @@
+# ScreenHop 1.0.5
+
+- Remove the in-picker self-updater and its detached worker. ScreenHop no longer fetches, fast-forwards to, installs, or executes code from a remote repository.
+- Keep updates under Omarchy and Marketplace control. The picker can only compare the installed renderer with a running preview and restart previews from code already present on disk.
+- Remove the retired updater from publication exports and upgraded installations, and add regressions that reject updater artifacts or update/build commands in the picker.
+
+This release addresses the Marketplace review of commit `4898f79b86cf0c0cb994050d9286d28517f2cce3`. Version 1.0.5 must receive a fresh exact-commit review before publication.
+
+---
+
 # ScreenHop 1.0.4
 
 Remove **Reload picker** entirely. The 1.0.3 registry-refresh approach still unloaded desktop-wide plugin panels and services and was reported to disrupt the shell. After installing or building, **Done** now only clears the update notice and closes ScreenHop. It invokes no shell restart or registry refresh.

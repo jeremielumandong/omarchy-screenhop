@@ -19,14 +19,6 @@ export SCREENHOP_FORBIDDEN_SHELL_CALL="$test_dir/forbidden-shell-call"
 export PATH="$test_dir/bin:$PATH"
 cp "$plugin_dir/Widget.qml" "$plugin_dir/devices.json" "$test_dir/"
 cp "$plugin_dir/tests/ui-smoke.qml" "$test_dir/shell.qml"
-cat > "$test_dir/plugin-update.mjs" <<'JS'
-import assert from 'node:assert/strict';
-const args=process.argv.slice(2);
-if(args[0]==='--acknowledge') console.log(JSON.stringify({status:'idle'}));
-else if(args[0]==='--progress') console.log(JSON.stringify({status:'idle'}));
-else if(args[0]==='--check') console.log(JSON.stringify({status:'checked',installed:'a'.repeat(40),commit:'b'.repeat(40),available:true,message:'Update available'}));
-else { assert.deepEqual(args,['--install','a'.repeat(40),'b'.repeat(40)]);console.log(JSON.stringify({status:'installed',message:'Updated'})); }
-JS
 cat > "$test_dir/viewport.mjs" <<'JS'
 import assert from 'node:assert/strict';
 import {existsSync, writeFileSync} from 'node:fs';
@@ -70,3 +62,5 @@ if rg 'ERROR|TypeError|ReferenceError|Cannot assign|Cannot open:|Error: (Catalog
 fi
 
 [[ ! -e "$SCREENHOP_FORBIDDEN_SHELL_CALL" ]]
+[[ ! -e "$plugin_dir/plugin-update.mjs" ]]
+! rg -q 'plugin-update|git (fetch|pull|merge)|build-native\.sh' "$plugin_dir/Widget.qml"

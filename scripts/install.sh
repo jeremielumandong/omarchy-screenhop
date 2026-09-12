@@ -39,7 +39,7 @@ if [[ -e "$plugin_dir" ]]; then
     cp -a -- "$plugin_dir" "$backup_dir/plugin"
 fi
 mkdir -p -- "$plugin_dir"
-for filename in plugin-update.mjs independent-browser.mjs native-launch.mjs native-chromium.mjs native-switch.mjs LOCAL_BROWSER_TEST.md Widget.qml manifest.json viewport.mjs native-preview.mjs preview-host.mjs skin-assets.mjs event-sockets.mjs viewer.html linked-previews.mjs sync-policy.mjs sync.js capture-rtc.js capture-ui.js build.mjs workspaces.mjs devices.json README.md PLAN.md LICENSE THIRD_PARTY_NOTICES.md preview.png; do
+for filename in independent-browser.mjs native-launch.mjs native-chromium.mjs native-switch.mjs LOCAL_BROWSER_TEST.md Widget.qml manifest.json viewport.mjs native-preview.mjs preview-host.mjs skin-assets.mjs event-sockets.mjs viewer.html linked-previews.mjs sync-policy.mjs sync.js capture-rtc.js capture-ui.js build.mjs workspaces.mjs devices.json README.md PLAN.md LICENSE THIRD_PARTY_NOTICES.md preview.png; do
     cp -- "$source_dir/$filename" "$plugin_dir/$filename"
 done
 mkdir -p -- "$plugin_dir/native" "$plugin_dir/.native"
@@ -48,8 +48,9 @@ native_temp=$(mktemp "$plugin_dir/.native/screenhop-native.XXXXXXXX")
 cp -- "$source_dir/.native/screenhop-native" "$native_temp"
 chmod 755 "$native_temp"
 mv -f -- "$native_temp" "$plugin_dir/.native/screenhop-native"
-# Remove retired phone-sharing modules from an older installation after backup.
-rm -f -- "$plugin_dir/phone-remote.mjs" "$plugin_dir/phone-firewall.mjs"
+# Remove retired modules from an older installation after backup. In particular,
+# never leave the removed self-updater executable in an upgraded installation.
+rm -f -- "$plugin_dir/plugin-update.mjs" "$plugin_dir/phone-remote.mjs" "$plugin_dir/phone-firewall.mjs"
 mkdir -p -- "$plugin_dir/assets" "$plugin_dir/docs"
 if [[ -d "$source_dir/assets" ]]; then cp -a -- "$source_dir/assets/." "$plugin_dir/assets/"; fi
 cp -a -- "$source_dir/docs/." "$plugin_dir/docs/"

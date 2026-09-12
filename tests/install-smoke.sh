@@ -36,6 +36,7 @@ with tempfile.TemporaryDirectory(prefix="screenhop-install-smoke-") as temporary
         }))
         (plugin / "preserved-marker").write_text(version)
         (plugin / "Widget.qml").write_text("// older widget")
+        (plugin / "plugin-update.mjs").write_text("// retired self-updater")
         (plugin / "phone-remote.mjs").write_text("// retired remote")
         (plugin / "phone-firewall.mjs").write_text("// retired firewall helper")
 
@@ -58,6 +59,7 @@ with tempfile.TemporaryDirectory(prefix="screenhop-install-smoke-") as temporary
         assert json.loads(discoverable[0].read_text())["version"] == release_version
 
     assert (root / "commands.log").read_text().splitlines().count("restart shell") == 1
+    assert not (plugins / "arkane.screenhop/plugin-update.mjs").exists()
     assert not (plugins / "arkane.screenhop/phone-remote.mjs").exists()
     assert not (plugins / "arkane.screenhop/phone-firewall.mjs").exists()
     assert len(json.loads((plugins / "arkane.screenhop/devices.json").read_text())) == 103
@@ -88,6 +90,7 @@ with tempfile.TemporaryDirectory(prefix="screenhop-install-smoke-") as temporary
     fresh = root / 'fresh-config/omarchy/plugins/arkane.screenhop'
     assert (fresh / '.native/screenhop-native').is_file()
     assert (fresh / 'independent-browser.mjs').is_file()
+    assert not (fresh / 'plugin-update.mjs').exists()
 
 print("PASS: clean and repeated installs preserve backups outside discovery and expose only the current ScreenHop version")
 PY

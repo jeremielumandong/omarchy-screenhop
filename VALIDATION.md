@@ -1,4 +1,10 @@
-# ScreenHop 1.0.4 validation
+# ScreenHop 1.0.5 validation
+
+The self-updater, its tests and every picker process/UI hook that invoked it have been removed. Publication export and installation lists exclude `plugin-update.mjs`; upgrades explicitly delete a stale copy after preserving the previous installation in the normal backup location. UI and installer smoke checks assert that no updater remains and that the picker contains no repository update or native-build execution path.
+
+Remediation validation passed: Omarchy validation of the exported public tree; QML picker smoke; repeated, upgrade and fresh-install smoke; shell and JavaScript syntax checks; three workspace/build-identity tests; and 51 selected runtime tests. One vendor-artwork test was intentionally skipped in the public export. The native-switch test initially reported the intentionally absent public binary, then passed after building the optional native host from the exported, reviewed source. `git diff --check` passed.
+
+## Previous 1.0.4 validation
 
 The picker regression passed with the Done action exercised and both `omarchy` and `omarchy-shell` replaced by fail-and-record stubs. Neither command was invoked. The update notice cleared and only the picker closed. Source review confirms the picker contains no shell restart or registry refresh command. Export/plugin validation and displayed-version consistency checks passed. This supersedes the 1.0.3 mocked-refresh evidence, which did not cover desktop-wide plugin unload behavior.
 
